@@ -11,8 +11,6 @@ const props = defineProps({
     default: false,
   },
 })
-
-const emit = defineEmits(['select'])
 </script>
 
 <template>
@@ -28,16 +26,21 @@ const emit = defineEmits(['select'])
     <dl class="info-grid info-grid--single">
       <div>
         <dt>Hours</dt>
-        <dd>{{ props.location.hours || 'Hours unavailable' }}</dd>
+        <dd>{{ props.location.hoursTodayLabel || props.location.hoursLabel || 'Hours unavailable' }}</dd>
       </div>
-      <div v-if="props.expanded && props.location.phone">
+      <div v-if="props.location.phone">
         <dt>Phone</dt>
         <dd>{{ props.location.phone }}</dd>
       </div>
     </dl>
 
-    <button class="card-link" type="button" @click="emit('select', props.location)">
-      {{ props.expanded ? 'Hide details' : 'View details' }}
-    </button>
+    <RouterLink
+      v-if="props.location.id"
+      class="card-link"
+      :to="{ name: 'location-detail', params: { locationId: props.location.id } }"
+    >
+      View details
+    </RouterLink>
+    <span v-else class="card-link card-link--disabled">Details unavailable</span>
   </BaseCard>
 </template>

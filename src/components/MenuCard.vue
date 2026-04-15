@@ -8,7 +8,6 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['select'])
 </script>
 
 <template>
@@ -29,8 +28,13 @@ const emit = defineEmits(['select'])
         <dd>{{ props.item.calories ?? 'N/A' }}</dd>
       </div>
     </dl>
-    <button class="card-link" type="button" @click="emit('select', props.item)">
+    <RouterLink
+      v-if="props.item.id"
+      class="card-link"
+      :to="{ name: 'menu-item-detail', params: { itemId: props.item.id } }"
+    >
       View details
-    </button>
+    </RouterLink>
+    <span v-else class="card-link card-link--disabled">Details unavailable</span>
   </BaseCard>
 </template>

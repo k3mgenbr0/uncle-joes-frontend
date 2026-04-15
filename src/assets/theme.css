@@ -355,6 +355,73 @@ select {
   color: rgba(255, 253, 249, 0.74);
 }
 
+.detail-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.detail-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.back-link {
+  width: fit-content;
+  font-weight: 700;
+  color: var(--color-saddle);
+}
+
+.detail-hero-card h1 {
+  margin: 0.45rem 0 0.65rem;
+  color: var(--color-walnut);
+}
+
+.detail-lead {
+  margin: 0;
+  color: rgba(46, 24, 8, 0.8);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status-pill--open {
+  background: rgba(67, 132, 86, 0.14);
+  color: #2e6e3d;
+}
+
+.status-pill--closed {
+  background: rgba(158, 50, 25, 0.12);
+  color: #9e3219;
+}
+
+.service-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.hours-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hours-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: var(--radius-sm);
+  background: rgba(228, 206, 175, 0.26);
+}
+
 .footer-links {
   display: flex;
   flex-wrap: wrap;
@@ -459,12 +526,18 @@ select {
 }
 
 .card-link {
+  display: inline-flex;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-caramel);
   font-weight: 700;
   cursor: pointer;
+}
+
+.card-link--disabled {
+  opacity: 0.65;
+  cursor: default;
 }
 
 .login-form,
@@ -610,6 +683,11 @@ select {
 
   .hero-section {
     padding-top: 3rem;
+  }
+
+  .detail-layout {
+    grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+    align-items: start;
   }
 
   .nav-toggle {

@@ -1,14 +1,60 @@
 import { apiClient, extractCollection, extractRecord, getErrorMessage } from './api'
 
+function formatHoursDay(day) {
+  if (!day?.open || !day?.close) {
+    return 'Closed'
+  }
+
+  return `${day.open} - ${day.close}`
+}
+
+function formatHours(hours) {
+  if (!hours || typeof hours !== 'object') {
+    return ''
+  }
+
+  const entries = Object.entries(hours)
+    .filter(([, value]) => value && typeof value === 'object')
+    .map(([day, value]) => `${day.slice(0, 3)}: ${formatHoursDay(value)}`)
+
+  return entries.join(' • ')
+}
+
 function normalizeLocation(location) {
+  const hours = location.hours ?? location.open_hours ?? location.business_hours ?? null
+  const hoursToday = location.hours_today ?? null
+  const addressOne = location.address ?? location.address_one ?? location.street_address ?? ''
+  const addressTwo = location.address_two ?? ''
+  const fullAddress =
+    location.full_address ??
+    [addressOne, addressTwo, location.city, location.state, location.postal_code]
+      .filter(Boolean)
+      .join(', ')
+
   return {
     id: String(location.id ?? location.location_id ?? ''),
     name: location.name ?? location.store_name ?? '',
     city: location.city ?? '',
     state: location.state ?? '',
-    address: location.address ?? location.street_address ?? '',
-    hours: location.hours ?? location.open_hours ?? location.business_hours ?? '',
+    address: addressOne,
+    addressLineTwo: addressTwo,
+    fullAddress,
+    mapAddress: location.map_address ?? fullAddress,
+    postalCode: location.postal_code ?? '',
+    hours,
+    hoursLabel: typeof hours === 'string' ? hours : formatHours(hours),
+    hoursToday,
+    hoursTodayLabel: formatHoursDay(hoursToday),
     phone: location.phone ?? location.phone_number ?? '',
+    email: location.email ?? '',
+    latitude: location.latitude ?? null,
+    longitude: location.longitude ?? null,
+    openNow: location.open_now ?? null,
+    openForBusiness: location.open_for_business ?? null,
+    wifi: location.wifi ?? null,
+    driveThru: location.drive_thru ?? null,
+    doorDash: location.door_dash ?? null,
+    nearBy: location.near_by ?? '',
     raw: location,
   }
 }

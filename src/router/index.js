@@ -2,7 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import HomeView from '../views/HomeView.vue'
 import MenuView from '../views/MenuView.vue'
+import MenuItemDetailView from '../views/MenuItemDetailView.vue'
 import LocationsView from '../views/LocationsView.vue'
+import LocationDetailView from '../views/LocationDetailView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -23,10 +25,22 @@ const router = createRouter({
       meta: { title: 'Menu | Uncle Joe\'s Coffee Company' },
     },
     {
+      path: '/menu/:itemId',
+      name: 'menu-item-detail',
+      component: MenuItemDetailView,
+      meta: { title: 'Menu Item | Uncle Joe\'s Coffee Company' },
+    },
+    {
       path: '/locations',
       name: 'locations',
       component: LocationsView,
       meta: { title: 'Locations | Uncle Joe\'s Coffee Company' },
+    },
+    {
+      path: '/locations/:locationId',
+      name: 'location-detail',
+      component: LocationDetailView,
+      meta: { title: 'Location Details | Uncle Joe\'s Coffee Company' },
     },
     {
       path: '/login',

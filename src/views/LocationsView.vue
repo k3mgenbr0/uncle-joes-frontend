@@ -5,14 +5,12 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import BaseInput from '../components/BaseInput.vue'
-import { fetchLocation, fetchLocations } from '../services/locationsService'
+import { fetchLocations } from '../services/locationsService'
 
 const locations = ref([])
 const searchTerm = ref('')
 const isLoading = ref(true)
 const errorMessage = ref('')
-const expandedLocationId = ref('')
-const locationDetails = ref({})
 
 const filteredLocations = computed(() => {
   const query = searchTerm.value.trim().toLowerCase()
@@ -38,27 +36,6 @@ async function loadLocations() {
     errorMessage.value = error.message
   } finally {
     isLoading.value = false
-  }
-}
-
-async function handleSelectLocation(location) {
-  if (!location.id) {
-    return
-  }
-
-  if (expandedLocationId.value === location.id) {
-    expandedLocationId.value = ''
-    return
-  }
-
-  expandedLocationId.value = location.id
-
-  if (!locationDetails.value[location.id]) {
-    try {
-      locationDetails.value[location.id] = await fetchLocation(location.id)
-    } catch {
-      locationDetails.value[location.id] = location
-    }
   }
 }
 
@@ -104,9 +81,7 @@ onMounted(loadLocations)
         <LocationCard
           v-for="location in filteredLocations"
           :key="location.id || `${location.city}-${location.address}`"
-          :location="locationDetails[location.id] || location"
-          :expanded="expandedLocationId === location.id"
-          @select="handleSelectLocation"
+          :location="location"
         />
       </div>
     </div>
