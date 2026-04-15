@@ -89,6 +89,14 @@ function formatDate(value) {
             <span>{{ formatCurrency(item.price) }}</span>
           </div>
         </div>
+
+        <RouterLink
+          v-if="order.id"
+          class="card-link"
+          :to="{ name: 'order-detail', params: { orderId: order.id } }"
+        >
+          View order details
+        </RouterLink>
       </article>
     </div>
   </BaseCard>

@@ -365,6 +365,11 @@ select {
   gap: 1.25rem;
 }
 
+.detail-sidebar {
+  display: grid;
+  gap: 1.25rem;
+}
+
 .back-link {
   width: fit-content;
   font-weight: 700;
@@ -374,6 +379,19 @@ select {
 .detail-hero-card h1 {
   margin: 0.45rem 0 0.65rem;
   color: var(--color-walnut);
+}
+
+.detail-image-wrap {
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.detail-image {
+  display: block;
+  width: 100%;
+  max-height: 22rem;
+  object-fit: cover;
 }
 
 .detail-lead {
@@ -410,6 +428,34 @@ select {
 .hours-list {
   display: grid;
   gap: 0.75rem;
+}
+
+.detail-list,
+.favorites-list,
+.related-links {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.favorites-list,
+.related-links {
+  padding-left: 0;
+}
+
+.favorite-link,
+.related-link {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius-sm);
+  background: rgba(228, 206, 175, 0.26);
+}
+
+.favorite-link span,
+.related-link span {
+  color: rgba(46, 24, 8, 0.76);
 }
 
 .hours-row {

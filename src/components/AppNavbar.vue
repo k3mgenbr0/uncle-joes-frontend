@@ -23,8 +23,8 @@ function closeMenu() {
   isMenuOpen.value = false
 }
 
-function handleLogout() {
-  authStore.logout()
+async function handleLogout() {
+  await authStore.logout()
   closeMenu()
   router.push('/')
 }
@@ -80,7 +80,7 @@ function handleLogout() {
           variant="ghost"
           @click="handleLogout"
         >
-          Logout
+          {{ authStore.currentUser?.firstName ? `${authStore.currentUser.firstName} • Logout` : 'Logout' }}
         </BaseButton>
       </nav>
     </div>

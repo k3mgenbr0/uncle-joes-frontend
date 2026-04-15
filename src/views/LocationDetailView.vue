@@ -19,10 +19,15 @@ const services = computed(() => {
     return []
   }
 
+  const explicitServices = Array.isArray(location.value.services) ? location.value.services : []
+
   return [
+    ...explicitServices.map((label) => ({ label, active: true })),
     { label: 'Wi-Fi', active: Boolean(location.value.wifi) },
     { label: 'Drive-Thru', active: Boolean(location.value.driveThru) },
     { label: 'DoorDash', active: Boolean(location.value.doorDash) },
+    { label: 'Pickup', active: Boolean(location.value.pickupSupported) },
+    { label: 'Dine-In', active: Boolean(location.value.dineInSupported) },
   ].filter((service) => service.active)
 })
 
@@ -155,6 +160,24 @@ onMounted(loadLocation)
             </div>
           </div>
           <p v-else class="detail-lead">Weekly hours are not available for this store yet.</p>
+        </BaseCard>
+
+        <BaseCard padding="lg">
+          <p class="eyebrow">Holiday Hours</p>
+          <h2>Special schedule updates</h2>
+          <div v-if="location.holidayHours.length" class="hours-list">
+            <div v-for="entry in location.holidayHours" :key="entry.date" class="hours-row">
+              <span>{{ entry.date }}</span>
+              <strong>
+                {{
+                  entry.open && entry.close
+                    ? `${entry.open} - ${entry.close}`
+                    : entry.note || 'Closed'
+                }}
+              </strong>
+            </div>
+          </div>
+          <p v-else class="detail-lead">No holiday schedule adjustments are posted right now.</p>
         </BaseCard>
       </div>
     </div>

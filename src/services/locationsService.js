@@ -34,6 +34,7 @@ function normalizeLocation(location) {
   return {
     id: String(location.id ?? location.location_id ?? ''),
     name: location.name ?? location.store_name ?? '',
+    storeName: location.store_name ?? location.name ?? '',
     city: location.city ?? '',
     state: location.state ?? '',
     address: addressOne,
@@ -54,6 +55,10 @@ function normalizeLocation(location) {
     wifi: location.wifi ?? null,
     driveThru: location.drive_thru ?? null,
     doorDash: location.door_dash ?? null,
+    services: Array.isArray(location.services) ? location.services : [],
+    holidayHours: Array.isArray(location.holiday_hours) ? location.holiday_hours : [],
+    pickupSupported: location.pickup_supported ?? null,
+    dineInSupported: location.dine_in_supported ?? null,
     nearBy: location.near_by ?? '',
     raw: location,
   }

@@ -7,6 +7,7 @@ import LocationsView from '../views/LocationsView.vue'
 import LocationDetailView from '../views/LocationDetailView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
+import OrderDetailView from '../views/OrderDetailView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 const router = createRouter({
@@ -55,6 +56,12 @@ const router = createRouter({
       meta: { title: 'Dashboard | Uncle Joe\'s Coffee Company', requiresAuth: true },
     },
     {
+      path: '/dashboard/orders/:orderId',
+      name: 'order-detail',
+      component: OrderDetailView,
+      meta: { title: 'Order Details | Uncle Joe\'s Coffee Company', requiresAuth: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: NotFoundView,
@@ -70,7 +77,7 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
   if (!authStore.hasRestoredSession) {
-    authStore.restoreSession()
+    await authStore.restoreSession()
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

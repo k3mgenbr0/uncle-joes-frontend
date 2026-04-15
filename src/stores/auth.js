@@ -5,6 +5,7 @@ import { loginMember, logoutMember, restoreSession as restoreStoredSession } fro
 export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref(null)
   const hasRestoredSession = ref(false)
+  const isRestoringSession = ref(false)
 
   const isAuthenticated = computed(() => Boolean(currentUser.value?.id))
   const memberDisplayName = computed(() => {
@@ -22,19 +23,31 @@ export const useAuthStore = defineStore('auth', () => {
     return member
   }
 
-  function logout() {
-    logoutMember()
+  async function logout() {
+    await logoutMember()
     currentUser.value = null
   }
 
-  function restoreSession() {
-    currentUser.value = restoreStoredSession()
-    hasRestoredSession.value = true
+  async function restoreSession() {
+    if (hasRestoredSession.value || isRestoringSession.value) {
+      return currentUser.value
+    }
+
+    isRestoringSession.value = true
+
+    try {
+      currentUser.value = await restoreStoredSession()
+      hasRestoredSession.value = true
+      return currentUser.value
+    } finally {
+      isRestoringSession.value = false
+    }
   }
 
   return {
     currentUser,
     hasRestoredSession,
+    isRestoringSession,
     isAuthenticated,
     memberDisplayName,
     login,

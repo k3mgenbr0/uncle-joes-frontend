@@ -2,7 +2,7 @@ import { apiClient, extractRecord, getErrorMessage } from './api'
 
 const STORAGE_KEY = 'uncle-joes-member-session'
 
-function normalizeMember(payload) {
+export function normalizeMember(payload) {
   const record = extractRecord(payload, ['member', 'user', 'data', 'result'])
 
   if (!record) {
@@ -26,37 +26,87 @@ function normalizeMember(payload) {
     firstName: record.first_name ?? record.firstName ?? '',
     lastName: record.last_name ?? record.lastName ?? '',
     name: record.name ?? record.full_name ?? record.fullName ?? '',
-    tier: record.tier ?? record.membership_tier ?? '',
+    tier: record.rewards_tier ?? record.tier ?? record.membership_tier ?? '',
+    pointsToNextReward: record.points_to_next_reward ?? null,
+    preferredStoreId: record.preferred_store_id ?? record.home_store ?? '',
+    preferredStore: record.preferred_store ?? null,
+    joinDate: record.join_date ?? '',
+    birthdayMonthDay: record.birthday_month_day ?? '',
+    marketingOptIn: record.marketing_opt_in ?? null,
+    profilePhotoUrl: record.profile_photo_url ?? '',
     raw: record,
   }
 }
 
+function persistSession(member) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(member))
+}
+
+export async function fetchAuthenticatedMember() {
+  const sessionResponse = await apiClient.get('/api/member/session')
+
+  if (!sessionResponse.data?.authenticated) {
+    return null
+  }
+
+  if (sessionResponse.data?.member) {
+    return normalizeMember(sessionResponse.data.member)
+  }
+
+  const profileResponse = await apiClient.get('/api/member/profile')
+  return normalizeMember(profileResponse.data)
+}
+
 export async function loginMember(credentials) {
   try {
-    const response = await apiClient.post('/login', credentials)
-    const member = normalizeMember(response.data)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(member))
+    const response = await apiClient.post('/api/member/login', credentials)
+    const member =
+      response.data?.member ? normalizeMember(response.data.member) : await fetchAuthenticatedMember()
+
+    if (!member) {
+      throw new Error('Login succeeded but no member profile was returned.')
+    }
+
+    persistSession(member)
     return member
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not sign you in. Please check your credentials.'))
   }
 }
 
-export function restoreSession() {
-  const raw = localStorage.getItem(STORAGE_KEY)
-
-  if (!raw) {
-    return null
-  }
-
+export async function restoreSession() {
   try {
-    return JSON.parse(raw)
-  } catch {
+    const member = await fetchAuthenticatedMember()
+
+    if (member) {
+      persistSession(member)
+      return member
+    }
+
     localStorage.removeItem(STORAGE_KEY)
     return null
+  } catch {
+    const raw = localStorage.getItem(STORAGE_KEY)
+
+    if (!raw) {
+      return null
+    }
+
+    try {
+      return JSON.parse(raw)
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
   }
 }
 
-export function logoutMember() {
-  localStorage.removeItem(STORAGE_KEY)
+export async function logoutMember() {
+  try {
+    await apiClient.post('/api/member/logout')
+  } catch {
+    // Clear local state even if the remote session is already gone.
+  } finally {
+    localStorage.removeItem(STORAGE_KEY)
+  }
 }

@@ -3,31 +3,46 @@ import { computed, onMounted, ref } from 'vue'
 import BaseCard from '../components/BaseCard.vue'
 import DashboardPoints from '../components/DashboardPoints.vue'
 import OrderHistory from '../components/OrderHistory.vue'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
-import { fetchMemberOrders, fetchMemberPoints } from '../services/membersService'
+import { fetchMemberFavorites, fetchMemberOrders, fetchMemberSummary } from '../services/membersService'
 
 const authStore = useAuthStore()
 
 const points = ref(0)
 const orders = ref([])
+const favorites = ref([])
 const pointsLoading = ref(true)
 const ordersLoading = ref(true)
+const favoritesLoading = ref(true)
 const pointsError = ref('')
 const ordersError = ref('')
+const favoritesError = ref('')
 
-const memberSummary = computed(() => authStore.currentUser?.raw ?? {})
+const preferredStore = computed(() => authStore.currentUser?.preferredStore ?? null)
 
-async function loadPoints() {
+async function loadSummary() {
   pointsLoading.value = true
+  ordersLoading.value = true
+  favoritesLoading.value = true
   pointsError.value = ''
+  ordersError.value = ''
+  favoritesError.value = ''
 
   try {
-    const result = await fetchMemberPoints(authStore.currentUser.id)
-    points.value = result.value
+    const result = await fetchMemberSummary(authStore.currentUser.id)
+    points.value = result.points
+    orders.value = result.recentOrders
+    favorites.value = result.favorites
   } catch (error) {
     pointsError.value = error.message
+    ordersError.value = error.message
+    favoritesError.value = error.message
   } finally {
     pointsLoading.value = false
+    ordersLoading.value = false
+    favoritesLoading.value = false
   }
 }
 
@@ -44,9 +59,21 @@ async function loadOrders() {
   }
 }
 
+async function loadFavorites() {
+  favoritesLoading.value = true
+  favoritesError.value = ''
+
+  try {
+    favorites.value = await fetchMemberFavorites(authStore.currentUser.id)
+  } catch (error) {
+    favoritesError.value = error.message
+  } finally {
+    favoritesLoading.value = false
+  }
+}
+
 onMounted(() => {
-  loadPoints()
-  loadOrders()
+  loadSummary()
 })
 </script>
 
@@ -56,7 +83,7 @@ onMounted(() => {
       <div class="section-heading section-heading--left">
         <span class="eyebrow">Coffee Club</span>
         <h1>Welcome back, {{ authStore.memberDisplayName }}</h1>
-        <p>Keep up with your rewards and revisit your latest coffee runs in one place.</p>
+        <p>Keep up with your rewards, favorite drinks, and recent coffee runs in one place.</p>
       </div>
 
       <div class="dashboard-hero-grid">
@@ -64,7 +91,7 @@ onMounted(() => {
           :points="points"
           :is-loading="pointsLoading"
           :error-message="pointsError"
-          @retry="loadPoints"
+          @retry="loadSummary"
         />
 
         <BaseCard class="member-card" padding="lg">
@@ -76,14 +103,86 @@ onMounted(() => {
               <dd>{{ authStore.currentUser?.email || 'Unavailable' }}</dd>
             </div>
             <div>
-              <dt>Membership Tier</dt>
-              <dd>{{ memberSummary.tier || memberSummary.membership_tier || authStore.currentUser?.tier || 'Standard' }}</dd>
+              <dt>Rewards Tier</dt>
+              <dd>{{ authStore.currentUser?.tier || 'Standard' }}</dd>
             </div>
             <div>
-              <dt>Member ID</dt>
-              <dd>{{ authStore.currentUser?.id }}</dd>
+              <dt>Points to Next Reward</dt>
+              <dd>{{ authStore.currentUser?.pointsToNextReward ?? 'Unavailable' }}</dd>
+            </div>
+            <div>
+              <dt>Join Date</dt>
+              <dd>{{ authStore.currentUser?.joinDate || 'Unavailable' }}</dd>
+            </div>
+            <div>
+              <dt>Birthday</dt>
+              <dd>{{ authStore.currentUser?.birthdayMonthDay || 'Unavailable' }}</dd>
+            </div>
+            <div>
+              <dt>Marketing Opt In</dt>
+              <dd>
+                {{
+                  authStore.currentUser?.marketingOptIn === null
+                    ? 'Unavailable'
+                    : authStore.currentUser?.marketingOptIn
+                      ? 'Yes'
+                      : 'No'
+                }}
+              </dd>
             </div>
           </dl>
+        </BaseCard>
+      </div>
+
+      <div class="dashboard-hero-grid">
+        <BaseCard class="member-card" padding="lg">
+          <p class="eyebrow">Preferred Store</p>
+          <h2>
+            {{
+              preferredStore?.store_name ||
+              [preferredStore?.city, preferredStore?.state].filter(Boolean).join(', ') ||
+              'No preferred store yet'
+            }}
+          </h2>
+          <p class="detail-lead">
+            {{ preferredStore?.full_address || 'Set a preferred store in your member profile when available.' }}
+          </p>
+          <div class="detail-stack">
+            <p class="detail-lead">Phone: {{ preferredStore?.phone || 'Unavailable' }}</p>
+            <p class="detail-lead">Member ID: {{ authStore.currentUser?.id }}</p>
+          </div>
+        </BaseCard>
+
+        <BaseCard padding="lg">
+          <p class="eyebrow">Favorites</p>
+          <h2>Your go-to orders</h2>
+
+          <LoadingState
+            v-if="favoritesLoading"
+            compact
+            title="Loading favorites"
+            description="Looking up your most-loved menu items."
+          />
+          <ErrorState
+            v-else-if="favoritesError"
+            compact
+            title="Favorites unavailable"
+            :message="favoritesError"
+            action-label="Try Again"
+            @action="loadFavorites"
+          />
+          <div v-else-if="favorites.length" class="favorites-list">
+            <RouterLink
+              v-for="favorite in favorites"
+              :key="favorite.id"
+              :to="{ name: 'menu-item-detail', params: { itemId: favorite.id } }"
+              class="favorite-link"
+            >
+              <strong>{{ favorite.name }}</strong>
+              <span>{{ favorite.totalQuantity }} ordered • {{ favorite.totalOrders }} visits</span>
+            </RouterLink>
+          </div>
+          <p v-else class="detail-lead">Favorite items will appear here once you have enough order history.</p>
         </BaseCard>
       </div>
 
