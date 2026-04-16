@@ -1,4 +1,4 @@
-import { apiClient, authenticatedApiClient, extractRecord, getErrorMessage } from './api'
+import { apiFetch, extractRecord, getErrorMessage } from './api'
 
 const STORAGE_KEY = 'uncle-joes-member-session'
 
@@ -43,25 +43,32 @@ function persistSession(member) {
 }
 
 export async function fetchAuthenticatedMember() {
-  const sessionResponse = await authenticatedApiClient.get('/api/member/session')
+  const sessionResponse = await apiFetch('/api/member/session', { auth: true })
 
-  if (!sessionResponse.data?.authenticated) {
+  if (!sessionResponse?.authenticated) {
     return null
   }
 
-  if (sessionResponse.data?.member) {
-    return normalizeMember(sessionResponse.data.member)
+  if (sessionResponse?.member) {
+    return normalizeMember(sessionResponse.member)
   }
 
-  const profileResponse = await authenticatedApiClient.get('/api/member/profile')
-  return normalizeMember(profileResponse.data)
+  const profileResponse = await apiFetch('/api/member/profile', { auth: true })
+  return normalizeMember(profileResponse)
 }
 
 export async function loginMember(credentials) {
   try {
-    const response = await authenticatedApiClient.post('/api/member/login', credentials)
+    const response = await apiFetch('/api/member/login', {
+      method: 'POST',
+      data: credentials,
+      auth: true,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
     const member =
-      response.data?.member ? normalizeMember(response.data.member) : await fetchAuthenticatedMember()
+      response?.member ? normalizeMember(response.member) : await fetchAuthenticatedMember()
 
     if (!member) {
       throw new Error('Login succeeded but no member profile was returned.')
@@ -103,7 +110,10 @@ export async function restoreSession() {
 
 export async function logoutMember() {
   try {
-    await authenticatedApiClient.post('/api/member/logout')
+    await apiFetch('/api/member/logout', {
+      method: 'POST',
+      auth: true,
+    })
   } catch {
     // Clear local state even if the remote session is already gone.
   } finally {

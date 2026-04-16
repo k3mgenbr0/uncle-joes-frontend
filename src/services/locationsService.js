@@ -1,4 +1,4 @@
-import { apiClient, extractCollection, extractRecord, getErrorMessage } from './api'
+import { apiFetch, extractCollection, extractRecord, getErrorMessage } from './api'
 
 function formatHoursDay(day) {
   if (!day?.open || !day?.close) {
@@ -66,8 +66,8 @@ function normalizeLocation(location) {
 
 export async function fetchLocations() {
   try {
-    const response = await apiClient.get('/locations')
-    return extractCollection(response.data, ['locations', 'data', 'stores']).map(normalizeLocation)
+    const response = await apiFetch('/locations')
+    return extractCollection(response, ['locations', 'data', 'stores']).map(normalizeLocation)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load locations right now.'))
   }
@@ -75,8 +75,8 @@ export async function fetchLocations() {
 
 export async function fetchLocation(locationId) {
   try {
-    const response = await apiClient.get(`/locations/${locationId}`)
-    return normalizeLocation(extractRecord(response.data, ['location', 'data', 'store']) ?? {})
+    const response = await apiFetch(`/locations/${locationId}`)
+    return normalizeLocation(extractRecord(response, ['location', 'data', 'store']) ?? {})
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load that location.'))
   }

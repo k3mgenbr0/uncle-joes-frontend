@@ -1,4 +1,4 @@
-import { apiClient, extractCollection, extractRecord, getErrorMessage } from './api'
+import { apiFetch, extractCollection, extractRecord, getErrorMessage } from './api'
 
 function normalizeMenuItem(item) {
   return {
@@ -33,8 +33,8 @@ function normalizeMenuItem(item) {
 
 export async function fetchMenu() {
   try {
-    const response = await apiClient.get('/menu')
-    return extractCollection(response.data, ['items', 'menu', 'data']).map(normalizeMenuItem)
+    const response = await apiFetch('/menu')
+    return extractCollection(response, ['items', 'menu', 'data']).map(normalizeMenuItem)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load the menu right now.'))
   }
@@ -42,8 +42,8 @@ export async function fetchMenu() {
 
 export async function fetchMenuItem(itemId) {
   try {
-    const response = await apiClient.get(`/menu/${itemId}`)
-    return normalizeMenuItem(extractRecord(response.data, ['item', 'data', 'menu_item']) ?? {})
+    const response = await apiFetch(`/menu/${itemId}`)
+    return normalizeMenuItem(extractRecord(response, ['item', 'data', 'menu_item']) ?? {})
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load that menu item.'))
   }

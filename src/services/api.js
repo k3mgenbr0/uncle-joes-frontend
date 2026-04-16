@@ -1,25 +1,73 @@
-import axios from 'axios'
-
-const API_BASE_URL =
+export const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   'https://uncle-joes-api-129124698283.us-central1.run.app'
 
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 15000,
-})
+class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.data = data
+  }
+}
 
-export const authenticatedApiClient = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 15000,
-})
+export async function apiFetch(path, options = {}) {
+  const {
+    method = 'GET',
+    data,
+    headers = {},
+    credentials,
+    auth = false,
+    ...rest
+  } = options
+
+  const requestHeaders = new Headers(headers)
+  const requestOptions = {
+    method,
+    headers: requestHeaders,
+    credentials: credentials ?? (auth ? 'include' : 'same-origin'),
+    ...rest,
+  }
+
+  if (data !== undefined) {
+    if (!requestHeaders.has('Content-Type')) {
+      requestHeaders.set('Content-Type', 'application/json')
+    }
+
+    requestOptions.body =
+      requestHeaders.get('Content-Type') === 'application/json' && typeof data !== 'string'
+        ? JSON.stringify(data)
+        : data
+  }
+
+  const url = new URL(path, API_BASE).toString()
+  const response = await fetch(url, requestOptions)
+
+  const contentType = response.headers.get('content-type') || ''
+  let payload = null
+
+  if (contentType.includes('application/json')) {
+    payload = await response.json()
+  } else {
+    const text = await response.text()
+    payload = text || null
+  }
+
+  if (!response.ok) {
+    const detail =
+      payload?.detail ||
+      payload?.message ||
+      payload?.error ||
+      (typeof payload === 'string' ? payload : '')
+    const message = detail
+      ? `${response.status} ${response.statusText}: ${detail}`
+      : `${response.status} ${response.statusText}`
+
+    throw new ApiError(message, response.status, payload)
+  }
+
+  return payload
+}
 
 export function extractCollection(payload, fallbacks = []) {
   if (Array.isArray(payload)) {
@@ -54,12 +102,12 @@ export function extractRecord(payload, fallbacks = []) {
 }
 
 export function getErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
-  if (error?.response?.data?.detail) {
-    return error.response.data.detail
+  if (error?.data?.detail) {
+    return `${error.status ? `${error.status}: ` : ''}${error.data.detail}`
   }
 
-  if (error?.response?.data?.message) {
-    return error.response.data.message
+  if (error?.data?.message) {
+    return `${error.status ? `${error.status}: ` : ''}${error.data.message}`
   }
 
   if (error?.message) {
