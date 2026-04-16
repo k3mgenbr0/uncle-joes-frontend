@@ -6,6 +6,7 @@ import BaseButton from '../components/BaseButton.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { fetchLocation } from '../services/locationsService'
+import { formatDate, formatHoursRange, formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
 const location = ref(null)
@@ -48,7 +49,7 @@ const weeklyHours = computed(() => {
 
   return Object.entries(hours).map(([day, value]) => ({
     day: `${day.charAt(0).toUpperCase()}${day.slice(1)}`,
-    label: value?.open && value?.close ? `${value.open} - ${value.close}` : 'Closed',
+    label: formatHoursRange(value?.open, value?.close),
   }))
 })
 
@@ -111,7 +112,7 @@ onMounted(loadLocation)
             </span>
           </div>
 
-          <h1>{{ location.name || `${location.city}, ${location.state}` }}</h1>
+          <h1>{{ formatStoreLabel(location.name, location.city, location.state) }}</h1>
           <p class="detail-lead">{{ location.fullAddress || location.address || 'Address unavailable' }}</p>
 
           <div class="detail-grid">
@@ -121,7 +122,7 @@ onMounted(loadLocation)
             </div>
             <div>
               <span class="detail-label">Phone</span>
-              <strong>{{ location.phone || 'Unavailable' }}</strong>
+              <strong>{{ formatPhone(location.phone) }}</strong>
             </div>
             <div>
               <span class="detail-label">Email</span>
@@ -167,11 +168,11 @@ onMounted(loadLocation)
           <h2>Special schedule updates</h2>
           <div v-if="location.holidayHours.length" class="hours-list">
             <div v-for="entry in location.holidayHours" :key="entry.date" class="hours-row">
-              <span>{{ entry.date }}</span>
+              <span>{{ formatDate(entry.date, { month: 'long', day: 'numeric', year: 'numeric' }) }}</span>
               <strong>
                 {{
                   entry.open && entry.close
-                    ? `${entry.open} - ${entry.close}`
+                    ? formatHoursRange(entry.open, entry.close)
                     : entry.note || 'Closed'
                 }}
               </strong>

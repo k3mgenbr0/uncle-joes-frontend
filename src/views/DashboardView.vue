@@ -7,6 +7,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchMemberDashboard, fetchMemberFavorites, fetchMemberOrders } from '../services/membersService'
+import { formatMonthDay, formatPhone, formatStoreLabel, formatDate } from '../utils/formatters'
 
 const authStore = useAuthStore()
 
@@ -115,11 +116,11 @@ onMounted(() => {
             </div>
             <div>
               <dt>Join Date</dt>
-              <dd>{{ authStore.currentUser?.joinDate || 'Unavailable' }}</dd>
+              <dd>{{ formatDate(authStore.currentUser?.joinDate) }}</dd>
             </div>
             <div>
               <dt>Birthday</dt>
-              <dd>{{ authStore.currentUser?.birthdayMonthDay || 'Unavailable' }}</dd>
+              <dd>{{ formatMonthDay(authStore.currentUser?.birthdayMonthDay) }}</dd>
             </div>
             <div>
               <dt>Marketing Opt In</dt>
@@ -142,16 +143,16 @@ onMounted(() => {
           <p class="eyebrow">Preferred Store</p>
           <h2>
             {{
-              preferredStore?.store_name ||
-              [preferredStore?.city, preferredStore?.state].filter(Boolean).join(', ') ||
-              'No preferred store yet'
+              preferredStore
+                ? formatStoreLabel(preferredStore?.store_name, preferredStore?.city, preferredStore?.state)
+                : 'No preferred store yet'
             }}
           </h2>
           <p class="detail-lead">
             {{ preferredStore?.full_address || 'Set a preferred store in your member profile when available.' }}
           </p>
           <div class="detail-stack">
-            <p class="detail-lead">Phone: {{ preferredStore?.phone || 'Unavailable' }}</p>
+            <p class="detail-lead">Phone: {{ formatPhone(preferredStore?.phone) }}</p>
             <p class="detail-lead">Member ID: {{ authStore.currentUser?.id }}</p>
           </div>
         </BaseCard>

@@ -3,6 +3,7 @@ import BaseCard from './BaseCard.vue'
 import LoadingState from './LoadingState.vue'
 import ErrorState from './ErrorState.vue'
 import EmptyState from './EmptyState.vue'
+import { formatCurrency, formatDate, formatStoreLabel } from '../utils/formatters'
 
 defineProps({
   orders: {
@@ -20,22 +21,6 @@ defineProps({
 })
 
 const emit = defineEmits(['retry'])
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value || 0)
-}
-
-function formatDate(value) {
-  if (!value) {
-    return 'Date unavailable'
-  }
-
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString()
-}
 </script>
 
 <template>
@@ -74,7 +59,7 @@ function formatDate(value) {
         <div class="order-header">
           <div>
             <h3>{{ formatDate(order.date) }}</h3>
-            <p>{{ order.locationName || [order.city, order.state].filter(Boolean).join(', ') || 'Location unavailable' }}</p>
+            <p>{{ formatStoreLabel(order.locationName, order.city, order.state) }}</p>
           </div>
           <strong>{{ formatCurrency(order.total) }}</strong>
         </div>

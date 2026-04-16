@@ -1,11 +1,12 @@
 import { apiFetch, extractCollection, extractRecord, getErrorMessage } from './api'
+import { formatHoursRange } from '../utils/formatters'
 
 function formatHoursDay(day) {
   if (!day?.open || !day?.close) {
     return 'Closed'
   }
 
-  return `${day.open} - ${day.close}`
+  return formatHoursRange(day.open, day.close)
 }
 
 function formatHours(hours) {

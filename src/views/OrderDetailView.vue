@@ -6,6 +6,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { fetchOrderDetail } from '../services/membersService'
+import { formatCurrency, formatDateTime, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
 const order = ref(null)
@@ -13,22 +14,6 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 
 const orderId = computed(() => route.params.orderId)
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value || 0)
-}
-
-function formatDate(value) {
-  if (!value) {
-    return 'Date unavailable'
-  }
-
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString()
-}
 
 async function loadOrder() {
   isLoading.value = true
@@ -80,8 +65,8 @@ onMounted(loadOrder)
             <span class="price-tag">{{ formatCurrency(order.total) }}</span>
           </div>
 
-          <h1>{{ order.locationName || [order.city, order.state].filter(Boolean).join(', ') || 'Store unavailable' }}</h1>
-          <p class="detail-lead">{{ formatDate(order.date) }}</p>
+          <h1>{{ formatStoreLabel(order.locationName, order.city, order.state) }}</h1>
+          <p class="detail-lead">{{ formatDateTime(order.date) }}</p>
 
           <div class="detail-grid">
             <div>
