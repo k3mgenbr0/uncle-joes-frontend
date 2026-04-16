@@ -1,13 +1,12 @@
 <script setup>
 import { reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import BaseButton from './BaseButton.vue'
 import BaseInput from './BaseInput.vue'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
 const router = useRouter()
-const route = useRoute()
 
 const form = reactive({
   email: '',
@@ -27,7 +26,7 @@ async function handleSubmit() {
       password: form.password,
     })
 
-    router.push(route.query.redirect || '/dashboard')
+    router.push('/')
   } catch (error) {
     errorMessage.value = error.message
   } finally {

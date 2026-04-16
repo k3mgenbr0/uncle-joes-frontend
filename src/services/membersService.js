@@ -1,4 +1,4 @@
-import { apiClient, extractCollection, extractRecord, getErrorMessage } from './api'
+import { authenticatedApiClient, extractCollection, extractRecord, getErrorMessage } from './api'
 import { normalizeMember } from './authService'
 
 function normalizePoints(payload) {
@@ -82,7 +82,7 @@ function normalizeSummary(payload) {
 
 export async function fetchMemberPoints(memberId) {
   try {
-    const response = await apiClient.get(`/members/${memberId}/points`)
+    const response = await authenticatedApiClient.get(`/members/${memberId}/points`)
     return normalizePoints(response.data)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load your Coffee Club points.'))
@@ -91,7 +91,7 @@ export async function fetchMemberPoints(memberId) {
 
 export async function fetchMemberOrders(memberId) {
   try {
-    const response = await apiClient.get(`/members/${memberId}/orders`)
+    const response = await authenticatedApiClient.get(`/members/${memberId}/orders`)
     return extractCollection(response.data, ['orders', 'data', 'history']).map(normalizeOrder)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load your order history.'))
@@ -100,7 +100,7 @@ export async function fetchMemberOrders(memberId) {
 
 export async function fetchMemberSummary(memberId) {
   try {
-    const response = await apiClient.get(`/members/${memberId}/summary`, {
+    const response = await authenticatedApiClient.get(`/members/${memberId}/summary`, {
       params: {
         include_items: true,
         recent_limit: 6,
@@ -115,7 +115,7 @@ export async function fetchMemberSummary(memberId) {
 
 export async function fetchMemberFavorites(memberId) {
   try {
-    const response = await apiClient.get(`/members/${memberId}/favorites`, {
+    const response = await authenticatedApiClient.get(`/members/${memberId}/favorites`, {
       params: { limit: 6 },
     })
     return extractCollection(response.data, ['favorites', 'data']).map(normalizeFavoriteItem)
@@ -126,7 +126,7 @@ export async function fetchMemberFavorites(memberId) {
 
 export async function fetchOrderDetail(orderId) {
   try {
-    const response = await apiClient.get(`/orders/${orderId}`)
+    const response = await authenticatedApiClient.get(`/orders/${orderId}`)
     return normalizeOrder(extractRecord(response.data, ['order', 'data', 'detail']) ?? {})
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load that order right now.'))

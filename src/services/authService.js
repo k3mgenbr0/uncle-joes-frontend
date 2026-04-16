@@ -1,4 +1,4 @@
-import { apiClient, extractRecord, getErrorMessage } from './api'
+import { apiClient, authenticatedApiClient, extractRecord, getErrorMessage } from './api'
 
 const STORAGE_KEY = 'uncle-joes-member-session'
 
@@ -43,7 +43,7 @@ function persistSession(member) {
 }
 
 export async function fetchAuthenticatedMember() {
-  const sessionResponse = await apiClient.get('/api/member/session')
+  const sessionResponse = await authenticatedApiClient.get('/api/member/session')
 
   if (!sessionResponse.data?.authenticated) {
     return null
@@ -53,13 +53,13 @@ export async function fetchAuthenticatedMember() {
     return normalizeMember(sessionResponse.data.member)
   }
 
-  const profileResponse = await apiClient.get('/api/member/profile')
+  const profileResponse = await authenticatedApiClient.get('/api/member/profile')
   return normalizeMember(profileResponse.data)
 }
 
 export async function loginMember(credentials) {
   try {
-    const response = await apiClient.post('/api/member/login', credentials)
+    const response = await authenticatedApiClient.post('/api/member/login', credentials)
     const member =
       response.data?.member ? normalizeMember(response.data.member) : await fetchAuthenticatedMember()
 
@@ -103,7 +103,7 @@ export async function restoreSession() {
 
 export async function logoutMember() {
   try {
-    await apiClient.post('/api/member/logout')
+    await authenticatedApiClient.post('/api/member/logout')
   } catch {
     // Clear local state even if the remote session is already gone.
   } finally {
