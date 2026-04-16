@@ -80,6 +80,21 @@ function normalizeSummary(payload) {
   }
 }
 
+export async function fetchMemberDashboard() {
+  try {
+    const response = await apiFetch('/api/member/dashboard?include_items=true&limit=6', { auth: true })
+    const record = extractRecord(response, ['dashboard', 'data']) ?? {}
+
+    return {
+      points: normalizePoints(record.points ?? {}).value,
+      orders: extractCollection(record.orders, ['recent_orders']).map(normalizeOrder),
+      raw: record,
+    }
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your dashboard.'))
+  }
+}
+
 export async function fetchMemberPoints(memberId) {
   try {
     const response = await apiFetch(`/members/${memberId}/points`, { auth: true })

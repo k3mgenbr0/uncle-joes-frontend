@@ -6,7 +6,7 @@ import OrderHistory from '../components/OrderHistory.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
-import { fetchMemberFavorites, fetchMemberOrders, fetchMemberSummary } from '../services/membersService'
+import { fetchMemberDashboard, fetchMemberFavorites, fetchMemberOrders } from '../services/membersService'
 
 const authStore = useAuthStore()
 
@@ -31,10 +31,13 @@ async function loadSummary() {
   favoritesError.value = ''
 
   try {
-    const result = await fetchMemberSummary(authStore.currentUser.id)
-    points.value = result.points
-    orders.value = result.recentOrders
-    favorites.value = result.favorites
+    const [dashboardResult, favoritesResult] = await Promise.all([
+      fetchMemberDashboard(),
+      fetchMemberFavorites(authStore.currentUser.id),
+    ])
+    points.value = dashboardResult.points
+    orders.value = dashboardResult.orders
+    favorites.value = favoritesResult
   } catch (error) {
     pointsError.value = error.message
     ordersError.value = error.message

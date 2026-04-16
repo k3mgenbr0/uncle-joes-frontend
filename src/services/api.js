@@ -41,16 +41,31 @@ export async function apiFetch(path, options = {}) {
   }
 
   const url = new URL(path, API_BASE).toString()
-  const response = await fetch(url, requestOptions)
+  let response
+
+  try {
+    response = await fetch(url, requestOptions)
+  } catch (error) {
+    console.error('[apiFetch] Fetch failed', {
+      url,
+      method,
+      error,
+    })
+    throw error
+  }
 
   const contentType = response.headers.get('content-type') || ''
+  const rawText = await response.text()
   let payload = null
 
-  if (contentType.includes('application/json')) {
-    payload = await response.json()
+  if (contentType.includes('application/json') && rawText) {
+    try {
+      payload = JSON.parse(rawText)
+    } catch {
+      payload = rawText
+    }
   } else {
-    const text = await response.text()
-    payload = text || null
+    payload = rawText || null
   }
 
   if (!response.ok) {
@@ -62,6 +77,15 @@ export async function apiFetch(path, options = {}) {
     const message = detail
       ? `${response.status} ${response.statusText}: ${detail}`
       : `${response.status} ${response.statusText}`
+
+    console.error('[apiFetch] Request failed', {
+      url,
+      method,
+      status: response.status,
+      statusText: response.statusText,
+      responseText: rawText,
+      payload,
+    })
 
     throw new ApiError(message, response.status, payload)
   }
