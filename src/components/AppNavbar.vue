@@ -15,7 +15,6 @@ const navLinks = computed(() => [
   ...(authStore.isAuthenticated
     ? [
         { name: 'Orders', to: '/orders' },
-        { name: 'Profile', to: '/profile' },
         { name: 'Dashboard', to: '/dashboard' },
       ]
     : []),

@@ -6,7 +6,7 @@ import OrderHistory from '../components/OrderHistory.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders } from '../services/membersService'
-import { formatMonthDay, formatPhone, formatStoreLabel, formatDate, formatFeatureError } from '../utils/formatters'
+import { formatMonthDay, formatPhone, formatStoreLabel, formatDate, formatFeatureError, formatTitleCase } from '../utils/formatters'
 
 const authStore = useAuthStore()
 
@@ -107,7 +107,7 @@ onMounted(() => {
             </div>
             <div v-if="memberRecord?.tier">
               <dt>Rewards Tier</dt>
-              <dd>{{ memberRecord.tier }}</dd>
+              <dd>{{ formatTitleCase(memberRecord.tier) }}</dd>
             </div>
             <div v-if="memberRecord?.pointsToNextReward !== null && memberRecord?.pointsToNextReward !== undefined">
               <dt>Points to Next Reward</dt>
@@ -187,6 +187,8 @@ onMounted(() => {
         :orders="orders"
         :is-loading="ordersLoading"
         :error-message="ordersError"
+        eyebrow="Recent Orders"
+        title="Your Order History"
         @retry="loadOrders"
       />
     </div>

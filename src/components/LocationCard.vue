@@ -1,5 +1,6 @@
 <script setup>
 import BaseCard from './BaseCard.vue'
+import { formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const props = defineProps({
   location: {
@@ -20,7 +21,7 @@ const props = defineProps({
       <strong>{{ props.location.city }}</strong>
     </div>
 
-    <h3>{{ props.location.storeName || props.location.name || [props.location.city, props.location.state].filter(Boolean).join(', ') }}</h3>
+    <h3>{{ formatStoreLabel(props.location.storeName || props.location.name, props.location.city, props.location.state) }}</h3>
     <p v-if="props.location.address" class="card-copy">{{ props.location.address }}</p>
 
     <dl v-if="props.location.hoursTodayLabel || props.location.hoursLabel || props.location.phone" class="info-grid info-grid--single">
@@ -30,7 +31,7 @@ const props = defineProps({
       </div>
       <div v-if="props.location.phone">
         <dt>Phone</dt>
-        <dd>{{ props.location.phone }}</dd>
+        <dd>{{ formatPhone(props.location.phone) }}</dd>
       </div>
     </dl>
 

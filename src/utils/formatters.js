@@ -144,6 +144,19 @@ export function formatStoreLabel(locationName, city, state) {
   return locationName || [city, state].filter(Boolean).join(', ') || 'Location unavailable'
 }
 
+export function formatTitleCase(value) {
+  if (!value) {
+    return ''
+  }
+
+  return String(value)
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+}
+
 export function formatCityStatePostal(city, state, postalCode) {
   const place = [city, state].filter(Boolean).join(', ')
 

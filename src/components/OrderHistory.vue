@@ -18,6 +18,14 @@ defineProps({
     type: String,
     default: '',
   },
+  eyebrow: {
+    type: String,
+    default: 'Recent Orders',
+  },
+  title: {
+    type: String,
+    default: 'Your Order History',
+  },
 })
 
 const emit = defineEmits(['retry'])
@@ -26,8 +34,8 @@ const emit = defineEmits(['retry'])
 <template>
   <BaseCard padding="lg">
     <div class="section-heading section-heading--left section-heading--compact">
-      <span class="eyebrow">Recent Orders</span>
-      <h2>Your Order History</h2>
+      <span class="eyebrow">{{ eyebrow }}</span>
+      <h2>{{ title }}</h2>
     </div>
 
     <LoadingState

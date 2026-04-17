@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
 const memberPrimaryCta = computed(() => (authStore.isAuthenticated ? '/orders' : '/login'))
-const memberPrimaryLabel = computed(() => (authStore.isAuthenticated ? 'View Orders' : 'Member Login'))
+const memberPrimaryLabel = computed(() => (authStore.isAuthenticated ? 'Start Pickup Order' : 'Member Login'))
 
 const benefits = [
   {

@@ -40,7 +40,7 @@ const emit = defineEmits(['retry'])
     />
     <div v-else class="points-summary">
       <strong>{{ points }}</strong>
-      <span>available reward points</span>
+      <span>{{ points === 1 ? 'available reward point' : 'available reward points' }}</span>
     </div>
   </BaseCard>
 </template>
