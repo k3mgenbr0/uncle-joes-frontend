@@ -8,6 +8,8 @@ import LocationDetailView from '../views/LocationDetailView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
+import OrdersView from '../views/OrdersView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 const router = createRouter({
@@ -54,6 +56,18 @@ const router = createRouter({
       name: 'dashboard',
       component: DashboardView,
       meta: { title: 'Dashboard | Uncle Joe\'s Coffee Company', requiresAuth: true },
+    },
+    {
+      path: '/orders',
+      name: 'orders',
+      component: OrdersView,
+      meta: { title: 'Orders | Uncle Joe\'s Coffee Company', requiresAuth: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+      meta: { title: 'Profile | Uncle Joe\'s Coffee Company', requiresAuth: true },
     },
     {
       path: '/dashboard/orders/:orderId',

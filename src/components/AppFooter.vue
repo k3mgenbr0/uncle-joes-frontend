@@ -9,6 +9,8 @@
       <div class="footer-links">
         <RouterLink to="/menu">Menu</RouterLink>
         <RouterLink to="/locations">Locations</RouterLink>
+        <RouterLink to="/orders">Orders</RouterLink>
+        <RouterLink to="/profile">Profile</RouterLink>
         <RouterLink to="/login">Coffee Club</RouterLink>
       </div>
     </div>

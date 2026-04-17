@@ -12,7 +12,13 @@ const navLinks = computed(() => [
   { name: 'Home', to: '/' },
   { name: 'Menu', to: '/menu' },
   { name: 'Locations', to: '/locations' },
-  { name: 'Dashboard', to: '/dashboard' },
+  ...(authStore.isAuthenticated
+    ? [
+        { name: 'Orders', to: '/orders' },
+        { name: 'Profile', to: '/profile' },
+        { name: 'Dashboard', to: '/dashboard' },
+      ]
+    : []),
 ])
 
 function toggleMenu() {

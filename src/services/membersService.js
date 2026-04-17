@@ -95,6 +95,70 @@ export async function fetchMemberDashboard() {
   }
 }
 
+export async function fetchSessionMemberPoints() {
+  try {
+    const response = await apiFetch('/api/member/points', { auth: true })
+    return normalizePoints(response)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your Coffee Club points.'))
+  }
+}
+
+export async function fetchSessionMemberOrders(options = {}) {
+  try {
+    const params = new URLSearchParams({
+      include_items: String(options.includeItems ?? true),
+      limit: String(options.limit ?? 50),
+      sort_dir: options.sortDir ?? 'desc',
+    })
+
+    if (options.sortBy) {
+      params.set('sort_by', options.sortBy)
+    }
+
+    const response = await apiFetch(`/api/member/orders?${params.toString()}`, { auth: true })
+    return extractCollection(response, ['orders', 'data', 'history']).map(normalizeOrder)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your order history.'))
+  }
+}
+
+export async function fetchSessionMemberSummary(options = {}) {
+  try {
+    const params = new URLSearchParams({
+      include_items: String(options.includeItems ?? true),
+      recent_limit: String(options.recentLimit ?? 6),
+      favorites_limit: String(options.favoritesLimit ?? 6),
+    })
+
+    if (options.favoritesWindowDays) {
+      params.set('favorites_window_days', String(options.favoritesWindowDays))
+    }
+
+    const response = await apiFetch(`/api/member/summary?${params.toString()}`, { auth: true })
+    return normalizeSummary(response)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your member summary.'))
+  }
+}
+
+export async function fetchSessionMemberFavorites(options = {}) {
+  try {
+    const params = new URLSearchParams({
+      limit: String(options.limit ?? 6),
+    })
+
+    if (options.windowDays) {
+      params.set('window_days', String(options.windowDays))
+    }
+
+    const response = await apiFetch(`/api/member/favorites?${params.toString()}`, { auth: true })
+    return extractCollection(response, ['favorites', 'data']).map(normalizeFavoriteItem)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your favorite items.'))
+  }
+}
+
 export async function fetchMemberPoints(memberId) {
   try {
     const response = await apiFetch(`/members/${memberId}/points`, { auth: true })

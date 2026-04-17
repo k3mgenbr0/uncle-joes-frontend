@@ -1,6 +1,12 @@
 <script setup>
+import { computed } from 'vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseCard from '../components/BaseCard.vue'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
+const memberPrimaryCta = computed(() => (authStore.isAuthenticated ? '/orders' : '/login'))
+const memberPrimaryLabel = computed(() => (authStore.isAuthenticated ? 'View Orders' : 'Member Login'))
 
 const benefits = [
   {
@@ -37,8 +43,8 @@ const benefits = [
             <RouterLink to="/locations">
               <BaseButton variant="secondary">Find Locations</BaseButton>
             </RouterLink>
-            <RouterLink to="/login">
-              <BaseButton variant="ghost">Member Login</BaseButton>
+            <RouterLink :to="memberPrimaryCta">
+              <BaseButton variant="ghost">{{ memberPrimaryLabel }}</BaseButton>
             </RouterLink>
           </div>
         </div>
