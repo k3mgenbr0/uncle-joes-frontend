@@ -485,6 +485,11 @@ select {
   gap: 1rem;
 }
 
+.detail-grid__item {
+  display: grid;
+  gap: 0.18rem;
+}
+
 .input-group {
   display: grid;
   gap: 0.5rem;
@@ -560,6 +565,7 @@ select {
 .info-grid dt,
 .detail-label,
 .member-details dt {
+  display: block;
   font-size: 0.84rem;
   font-weight: 700;
   color: rgba(86, 42, 14, 0.72);
@@ -569,6 +575,13 @@ select {
 .member-details dd {
   margin: 0.2rem 0 0;
   font-weight: 600;
+}
+
+.detail-value {
+  display: block;
+  margin-top: 0.2rem;
+  font-weight: 700;
+  color: var(--color-ink);
 }
 
 .card-link {

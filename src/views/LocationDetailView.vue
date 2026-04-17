@@ -5,7 +5,7 @@ import BaseCard from '../components/BaseCard.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { fetchLocation } from '../services/locationsService'
-import { formatDate, formatHoursRange, formatPhone, formatStoreLabel } from '../utils/formatters'
+import { dedupeLabels, formatCityStatePostal, formatDate, formatHoursRange, formatPhone, formatServiceLabel, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
 const location = ref(null)
@@ -28,14 +28,17 @@ const services = computed(() => {
 
   const explicitServices = Array.isArray(location.value.services) ? location.value.services : []
 
-  return [
-    ...explicitServices.map((label) => ({ label, active: true })),
-    { label: 'Wi-Fi', active: Boolean(location.value.wifi) },
-    { label: 'Drive-Thru', active: Boolean(location.value.driveThru) },
-    { label: 'DoorDash', active: Boolean(location.value.doorDash) },
-    { label: 'Pickup', active: Boolean(location.value.pickupSupported) },
-    { label: 'Dine-In', active: Boolean(location.value.dineInSupported) },
-  ].filter((service) => service.active)
+  return dedupeLabels(
+    [
+      ...explicitServices,
+      location.value.wifi ? 'Wi-Fi' : '',
+      location.value.driveThru ? 'Drive-Thru' : '',
+      location.value.doorDash ? 'DoorDash' : '',
+      location.value.pickupSupported ? 'Pickup' : '',
+      location.value.dineInSupported ? 'Dine-In' : '',
+    ],
+    formatServiceLabel,
+  )
 })
 
 const mapUrl = computed(() => {
@@ -58,6 +61,10 @@ const weeklyHours = computed(() => {
     label: formatHoursRange(value?.open, value?.close),
   }))
 })
+
+const cityStatePostal = computed(() =>
+  formatCityStatePostal(location.value?.city, location.value?.state, location.value?.postalCode),
+)
 
 async function loadLocation() {
   isLoading.value = true
@@ -122,25 +129,21 @@ onMounted(loadLocation)
           <div class="detail-stack">
             <p v-if="location.address" class="detail-lead">{{ location.address }}</p>
             <p v-if="location.addressLineTwo" class="detail-lead">{{ location.addressLineTwo }}</p>
-            <p v-if="location.city || location.state || location.postalCode" class="detail-lead">
-              {{ [location.city, location.state, location.postalCode].filter(Boolean).join(', ') }}
-            </p>
+            <p v-if="cityStatePostal" class="detail-lead">{{ cityStatePostal }}</p>
           </div>
 
           <div v-if="contactRows.length" class="detail-grid">
-            <div v-for="row in contactRows" :key="row.label">
+            <div v-for="row in contactRows" :key="row.label" class="detail-grid__item">
               <span class="detail-label">{{ row.label }}</span>
-              <strong>{{ row.value }}</strong>
+              <strong class="detail-value">{{ row.value }}</strong>
             </div>
           </div>
 
           <div v-if="services.length" class="service-badges">
-            <span v-for="service in services" :key="service.label" class="badge">
-              {{ service.label }}
+            <span v-for="service in services" :key="service" class="badge">
+              {{ service }}
             </span>
           </div>
-
-          <p v-if="location.nearBy" class="detail-lead">{{ location.nearBy }}</p>
         </BaseCard>
 
         <BaseCard v-if="weeklyHours.length" padding="lg">

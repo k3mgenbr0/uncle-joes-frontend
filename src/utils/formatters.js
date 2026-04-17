@@ -144,6 +144,71 @@ export function formatStoreLabel(locationName, city, state) {
   return locationName || [city, state].filter(Boolean).join(', ') || 'Location unavailable'
 }
 
+export function formatCityStatePostal(city, state, postalCode) {
+  const place = [city, state].filter(Boolean).join(', ')
+
+  if (place && postalCode) {
+    return `${place} ${postalCode}`
+  }
+
+  return place || postalCode || ''
+}
+
+export function formatServiceLabel(value) {
+  if (!value) {
+    return ''
+  }
+
+  const normalized = String(value)
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+
+  const specialCases = {
+    wifi: 'Wi-Fi',
+    'wi fi': 'Wi-Fi',
+    doordash: 'DoorDash',
+    'door dash': 'DoorDash',
+    'drive thru': 'Drive-Thru',
+    drivethru: 'Drive-Thru',
+    pickup: 'Pickup',
+    'pick up': 'Pickup',
+    'dine in': 'Dine-In',
+    dinein: 'Dine-In',
+    'in store': 'In Store',
+    instore: 'In Store',
+  }
+
+  if (specialCases[normalized]) {
+    return specialCases[normalized]
+  }
+
+  return normalized.replace(/\b\w/g, (character) => character.toUpperCase())
+}
+
+export function dedupeLabels(values = [], formatter = (value) => value) {
+  const seen = new Set()
+
+  return values.reduce((result, value) => {
+    const formatted = formatter(value)
+
+    if (!formatted) {
+      return result
+    }
+
+    const key = formatted.toLowerCase()
+
+    if (seen.has(key)) {
+      return result
+    }
+
+    seen.add(key)
+    result.push(formatted)
+    return result
+  }, [])
+}
+
 export function isAuthErrorMessage(message) {
   if (!message) {
     return false

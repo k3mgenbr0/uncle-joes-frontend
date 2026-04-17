@@ -84,10 +84,19 @@ export async function fetchMemberDashboard() {
   try {
     const response = await apiFetch('/api/member/dashboard?include_items=true&limit=6', { auth: true })
     const record = extractRecord(response, ['dashboard', 'data']) ?? {}
+    const memberRecord = record.member && typeof record.member === 'object' ? record.member : null
 
     return {
+      member: memberRecord ? normalizeMember(memberRecord) : null,
       points: normalizePoints(record.points ?? {}).value,
       orders: extractCollection(record.orders, ['recent_orders']).map(normalizeOrder),
+      favorites: extractCollection(record.favorites, ['items']).map(normalizeFavoriteItem),
+      pointsHistory: extractCollection(record.points_history, ['history']).map((entry) => ({
+        id: String(entry.order_id ?? entry.id ?? ''),
+        date: entry.order_date ?? entry.date ?? '',
+        points: Number(entry.points_earned ?? 0),
+        total: Number(entry.order_total ?? entry.total ?? 0),
+      })),
       raw: record,
     }
   } catch (error) {

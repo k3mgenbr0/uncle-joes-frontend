@@ -49,17 +49,31 @@ export async function fetchAuthenticatedMember() {
     return null
   }
 
-  if (sessionResponse?.member) {
-    return normalizeMember(sessionResponse.member)
-  }
+  const sessionMember = sessionResponse?.member ?? null
 
-  const profileResponse = await apiFetch('/api/member/profile', { auth: true })
-  return normalizeMember(profileResponse)
+  try {
+    const profileResponse = await apiFetch('/api/member/profile', { auth: true })
+    const mergedRecord =
+      sessionMember && profileResponse && typeof profileResponse === 'object'
+        ? {
+            ...(typeof sessionMember === 'object' ? sessionMember : {}),
+            ...(typeof profileResponse === 'object' ? profileResponse : {}),
+          }
+        : profileResponse ?? sessionMember
+
+    return normalizeMember(mergedRecord)
+  } catch (error) {
+    if (sessionMember) {
+      return normalizeMember(sessionMember)
+    }
+
+    throw error
+  }
 }
 
 export async function loginMember(credentials) {
   try {
-    const response = await apiFetch('/api/member/login', {
+    await apiFetch('/api/member/login', {
       method: 'POST',
       data: credentials,
       auth: true,
@@ -67,11 +81,10 @@ export async function loginMember(credentials) {
         'Content-Type': 'application/json',
       },
     })
-    const member =
-      response?.member ? normalizeMember(response.member) : await fetchAuthenticatedMember()
+    const member = await fetchAuthenticatedMember()
 
     if (!member) {
-      throw new Error('Login succeeded but no member profile was returned.')
+      throw new Error('Sign-in succeeded, but the Coffee Club session was not established.')
     }
 
     persistSession(member)
@@ -93,23 +106,8 @@ export async function restoreSession() {
     localStorage.removeItem(STORAGE_KEY)
     return null
   } catch (error) {
-    if (error?.status === 401) {
-      localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
-
-    const raw = localStorage.getItem(STORAGE_KEY)
-
-    if (!raw) {
-      return null
-    }
-
-    try {
-      return JSON.parse(raw)
-    } catch {
-      localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
+    localStorage.removeItem(STORAGE_KEY)
+    return null
   }
 }
 

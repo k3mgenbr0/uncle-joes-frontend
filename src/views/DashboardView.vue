@@ -3,10 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import BaseCard from '../components/BaseCard.vue'
 import DashboardPoints from '../components/DashboardPoints.vue'
 import OrderHistory from '../components/OrderHistory.vue'
-import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
-import { fetchMemberDashboard, fetchMemberFavorites, fetchMemberOrders } from '../services/membersService'
+import { fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders } from '../services/membersService'
 import { formatMonthDay, formatPhone, formatStoreLabel, formatDate, formatFeatureError } from '../utils/formatters'
 
 const authStore = useAuthStore()
@@ -20,8 +19,10 @@ const favoritesLoading = ref(true)
 const pointsError = ref('')
 const ordersError = ref('')
 const favoritesError = ref('')
+const dashboardMember = ref(null)
 
-const preferredStore = computed(() => authStore.currentUser?.preferredStore ?? null)
+const memberRecord = computed(() => dashboardMember.value ?? authStore.currentUser ?? null)
+const preferredStore = computed(() => memberRecord.value?.preferredStore ?? null)
 
 async function loadSummary() {
   pointsLoading.value = true
@@ -32,13 +33,11 @@ async function loadSummary() {
   favoritesError.value = ''
 
   try {
-    const [dashboardResult, favoritesResult] = await Promise.all([
-      fetchMemberDashboard(),
-      fetchMemberFavorites(authStore.currentUser.id),
-    ])
+    const dashboardResult = await fetchMemberDashboard()
+    dashboardMember.value = dashboardResult.member
     points.value = dashboardResult.points
     orders.value = dashboardResult.orders
-    favorites.value = favoritesResult
+    favorites.value = dashboardResult.favorites
   } catch (error) {
     pointsError.value = formatFeatureError(error.message, 'Rewards')
     ordersError.value = formatFeatureError(error.message, 'Orders')
@@ -55,7 +54,7 @@ async function loadOrders() {
   ordersError.value = ''
 
   try {
-    orders.value = await fetchMemberOrders(authStore.currentUser.id)
+    orders.value = await fetchSessionMemberOrders({ includeItems: true, limit: 50 })
   } catch (error) {
     ordersError.value = formatFeatureError(error.message, 'Orders')
   } finally {
@@ -68,7 +67,7 @@ async function loadFavorites() {
   favoritesError.value = ''
 
   try {
-    favorites.value = await fetchMemberFavorites(authStore.currentUser.id)
+    favorites.value = await fetchSessionMemberFavorites({ limit: 6 })
   } catch (error) {
     favoritesError.value = formatFeatureError(error.message, 'Favorites')
   } finally {
@@ -102,31 +101,31 @@ onMounted(() => {
           <p class="eyebrow">Member Details</p>
           <h2>{{ authStore.memberDisplayName }}</h2>
           <dl class="member-details">
-            <div v-if="authStore.currentUser?.email">
+            <div v-if="memberRecord?.email">
               <dt>Email</dt>
-              <dd>{{ authStore.currentUser.email }}</dd>
+              <dd>{{ memberRecord.email }}</dd>
             </div>
-            <div v-if="authStore.currentUser?.tier">
+            <div v-if="memberRecord?.tier">
               <dt>Rewards Tier</dt>
-              <dd>{{ authStore.currentUser.tier }}</dd>
+              <dd>{{ memberRecord.tier }}</dd>
             </div>
-            <div v-if="authStore.currentUser?.pointsToNextReward !== null && authStore.currentUser?.pointsToNextReward !== undefined">
+            <div v-if="memberRecord?.pointsToNextReward !== null && memberRecord?.pointsToNextReward !== undefined">
               <dt>Points to Next Reward</dt>
-              <dd>{{ authStore.currentUser.pointsToNextReward }}</dd>
+              <dd>{{ memberRecord.pointsToNextReward }}</dd>
             </div>
-            <div v-if="authStore.currentUser?.joinDate">
+            <div v-if="memberRecord?.joinDate">
               <dt>Join Date</dt>
-              <dd>{{ formatDate(authStore.currentUser?.joinDate) }}</dd>
+              <dd>{{ formatDate(memberRecord?.joinDate) }}</dd>
             </div>
-            <div v-if="authStore.currentUser?.birthdayMonthDay">
+            <div v-if="memberRecord?.birthdayMonthDay">
               <dt>Birthday</dt>
-              <dd>{{ formatMonthDay(authStore.currentUser?.birthdayMonthDay) }}</dd>
+              <dd>{{ formatMonthDay(memberRecord?.birthdayMonthDay) }}</dd>
             </div>
-            <div v-if="authStore.currentUser?.marketingOptIn !== null && authStore.currentUser?.marketingOptIn !== undefined">
+            <div v-if="memberRecord?.marketingOptIn !== null && memberRecord?.marketingOptIn !== undefined">
               <dt>Marketing Opt In</dt>
               <dd>
                 {{
-                  authStore.currentUser?.marketingOptIn
+                  memberRecord?.marketingOptIn
                     ? 'Yes'
                     : 'No'
                 }}
