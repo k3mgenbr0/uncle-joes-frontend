@@ -1,5 +1,7 @@
 <script setup>
+import { computed, ref, watch } from 'vue'
 import BaseCard from './BaseCard.vue'
+import { formatCurrency } from '../utils/formatters'
 
 const props = defineProps({
   item: {
@@ -8,30 +10,60 @@ const props = defineProps({
   },
 })
 
+const selectedVariantId = ref(props.item.defaultVariant?.id ?? props.item.variants?.[0]?.id ?? '')
+
+watch(
+  () => props.item.id,
+  () => {
+    selectedVariantId.value = props.item.defaultVariant?.id ?? props.item.variants?.[0]?.id ?? ''
+  },
+)
+
+const selectedVariant = computed(() =>
+  props.item.variants.find((variant) => variant.id === selectedVariantId.value)
+    ?? props.item.defaultVariant
+    ?? props.item.variants[0]
+    ?? null,
+)
 </script>
 
 <template>
   <BaseCard class="menu-card">
     <div class="card-topline">
       <span v-if="props.item.category" class="badge">{{ props.item.category }}</span>
-      <span class="price-tag">${{ props.item.price.toFixed(2) }}</span>
+      <span class="price-tag">
+        {{ selectedVariant?.priceDisplay || formatCurrency(selectedVariant?.price) }}
+      </span>
     </div>
     <h3>{{ props.item.name }}</h3>
     <p v-if="props.item.description" class="card-copy">{{ props.item.description }}</p>
-    <dl v-if="props.item.size || props.item.calories !== null" class="info-grid">
-      <div v-if="props.item.size">
+
+    <div v-if="props.item.variants.length > 1" class="size-toggle-group">
+      <button
+        v-for="variant in props.item.variants"
+        :key="variant.id"
+        type="button"
+        :class="['size-toggle', { 'size-toggle--active': selectedVariant?.id === variant.id }]"
+        @click="selectedVariantId = variant.id"
+      >
+        {{ variant.size }}
+      </button>
+    </div>
+
+    <dl v-if="selectedVariant?.size || selectedVariant?.calories !== null" class="info-grid">
+      <div v-if="selectedVariant?.size">
         <dt>Size</dt>
-        <dd>{{ props.item.size }}</dd>
+        <dd>{{ selectedVariant.size }}</dd>
       </div>
-      <div v-if="props.item.calories !== null">
+      <div v-if="selectedVariant?.calories !== null">
         <dt>Calories</dt>
-        <dd>{{ props.item.calories }}</dd>
+        <dd>{{ selectedVariant.calories }}</dd>
       </div>
     </dl>
     <RouterLink
-      v-if="props.item.id"
+      v-if="selectedVariant?.id"
       class="card-link"
-      :to="{ name: 'menu-item-detail', params: { itemId: props.item.id } }"
+      :to="{ name: 'menu-item-detail', params: { itemId: selectedVariant.id } }"
     >
       View details
     </RouterLink>

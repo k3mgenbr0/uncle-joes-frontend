@@ -469,6 +469,33 @@ select {
   color: rgba(46, 24, 8, 0.76);
 }
 
+.size-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.size-toggle {
+  border: 1px solid rgba(120, 56, 12, 0.16);
+  border-radius: var(--radius-pill);
+  padding: 0.45rem 0.8rem;
+  background: rgba(255, 253, 249, 0.8);
+  color: var(--color-saddle);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color var(--transition),
+    background var(--transition),
+    color var(--transition);
+}
+
+.size-toggle--active {
+  background: rgba(200, 105, 28, 0.12);
+  border-color: rgba(200, 105, 28, 0.45);
+  color: var(--color-walnut);
+}
+
 .hours-row {
   display: flex;
   align-items: center;

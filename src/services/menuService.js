@@ -1,5 +1,11 @@
 import { apiFetch, extractCollection, extractRecord, getErrorMessage } from './api'
 
+const SIZE_PRIORITY = {
+  Small: 1,
+  Medium: 2,
+  Large: 3,
+}
+
 function normalizeMenuItem(item) {
   return {
     id: String(item.id ?? item.item_id ?? item.menu_item_id ?? ''),
@@ -29,6 +35,57 @@ function normalizeMenuItem(item) {
       : [],
     raw: item,
   }
+}
+
+function sortVariantsBySize(left, right) {
+  const leftPriority = SIZE_PRIORITY[left.size] ?? 99
+  const rightPriority = SIZE_PRIORITY[right.size] ?? 99
+
+  if (leftPriority !== rightPriority) {
+    return leftPriority - rightPriority
+  }
+
+  return (left.size || '').localeCompare(right.size || '')
+}
+
+export function groupMenuItems(items = []) {
+  const groups = new Map()
+
+  items.forEach((item) => {
+    const key = [item.name, item.category].filter(Boolean).join('::').toLowerCase()
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        description: item.description,
+        image: item.image,
+        availabilityStatus: item.availabilityStatus,
+        seasonal: item.seasonal,
+        tags: item.tags,
+        variants: [],
+      })
+    }
+
+    groups.get(key).variants.push({
+      id: item.id,
+      size: item.size,
+      calories: item.calories,
+      price: item.price,
+      priceDisplay: item.priceDisplay,
+      raw: item,
+    })
+  })
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      variants: [...group.variants].sort(sortVariantsBySize),
+      defaultVariant: [...group.variants].sort(sortVariantsBySize).find((variant) => variant.size === 'Medium')
+        ?? [...group.variants].sort(sortVariantsBySize)[0],
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name))
 }
 
 export async function fetchMenu() {

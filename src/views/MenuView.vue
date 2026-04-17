@@ -5,7 +5,7 @@ import MenuFilters from '../components/MenuFilters.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
-import { fetchMenu } from '../services/menuService'
+import { fetchMenu, groupMenuItems } from '../services/menuService'
 
 const menuItems = ref([])
 const isLoading = ref(true)
@@ -13,13 +13,15 @@ const errorMessage = ref('')
 const searchTerm = ref('')
 const selectedCategory = ref('All')
 
+const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
+
 const categories = computed(() => {
-  const values = new Set(menuItems.value.map((item) => item.category).filter(Boolean))
+  const values = new Set(groupedMenuItems.value.map((item) => item.category).filter(Boolean))
   return ['All', ...Array.from(values).sort()]
 })
 
 const filteredItems = computed(() => {
-  return menuItems.value.filter((item) => {
+  return groupedMenuItems.value.filter((item) => {
     const matchesCategory = selectedCategory.value === 'All' || item.category === selectedCategory.value
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.value.trim().toLowerCase())
     return matchesCategory && matchesSearch
@@ -80,7 +82,7 @@ onMounted(loadMenu)
       <div v-else class="cards-grid cards-grid--three">
         <MenuCard
           v-for="item in filteredItems"
-          :key="item.id || `${item.name}-${item.size}`"
+          :key="item.id || item.name"
           :item="item"
         />
       </div>

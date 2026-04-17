@@ -8,7 +8,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
-import { fetchMenu } from '../services/menuService'
+import { fetchMenu, groupMenuItems } from '../services/menuService'
 import { fetchLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
 import { formatCurrency, formatDateTime, formatFeatureError, formatPhone, formatStoreLabel } from '../utils/formatters'
@@ -30,6 +30,7 @@ const isSubmitting = ref(false)
 const selectedStoreId = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
+const selectedVariantByGroup = ref({})
 const orderSearchTerm = ref('')
 const selectedOrderState = ref('All')
 const orderSort = ref('newest')
@@ -50,8 +51,10 @@ const categories = computed(() => [
   ...Array.from(new Set(menuItems.value.map((item) => item.category).filter(Boolean))).sort(),
 ])
 
+const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
+
 const filteredMenuItems = computed(() =>
-  menuItems.value.filter((item) => {
+  groupedMenuItems.value.filter((item) => {
     const matchesCategory = selectedCategory.value === 'All' || item.category === selectedCategory.value
     const matchesSearch = !menuSearchTerm.value.trim() || item.name.toLowerCase().includes(menuSearchTerm.value.trim().toLowerCase())
     return matchesCategory && matchesSearch
@@ -121,11 +124,49 @@ function itemKey(item) {
   return `${item.id}-${item.size || 'default'}`
 }
 
+function getSelectedVariant(group) {
+  const selectedVariantId = selectedVariantByGroup.value[group.id]
+
+  return group.variants.find((variant) => variant.id === selectedVariantId)
+    ?? group.defaultVariant
+    ?? group.variants[0]
+    ?? null
+}
+
+function buildCartItem(group) {
+  const variant = getSelectedVariant(group)
+
+  if (!variant) {
+    return null
+  }
+
+  return {
+    id: variant.id,
+    name: group.name,
+    size: variant.size,
+    category: group.category,
+    price: variant.price,
+    priceDisplay: variant.priceDisplay,
+    calories: variant.calories,
+  }
+}
+
+function selectVariant(groupId, variantId) {
+  selectedVariantByGroup.value = {
+    ...selectedVariantByGroup.value,
+    [groupId]: variantId,
+  }
+}
+
 function setPanel(panel) {
   activePanel.value = panel
 }
 
 function addToCart(item) {
+  if (!item) {
+    return
+  }
+
   submitSuccess.value = null
   const key = itemKey(item)
   const existing = cart.value.find((entry) => entry.key === key)
@@ -231,6 +272,12 @@ async function loadBuilderData() {
       fetchLocations(),
     ])
     menuItems.value = menuResult
+    selectedVariantByGroup.value = groupMenuItems(menuResult).reduce((result, group) => {
+      if (group.defaultVariant?.id) {
+        result[group.id] = group.defaultVariant.id
+      }
+      return result
+    }, {})
     locations.value = locationResult
     if (!selectedStoreId.value && locationResult.length) {
       selectedStoreId.value = locationResult[0].id
@@ -470,16 +517,40 @@ onMounted(() => {
             <div v-if="!builderLoading && !builderError && filteredMenuItems.length" class="order-menu-grid">
               <article
                 v-for="item in filteredMenuItems"
-                :key="itemKey(item)"
+                :key="item.id"
                 class="order-menu-item"
               >
                 <div class="card-topline">
                   <span v-if="item.category" class="badge">{{ item.category }}</span>
-                  <span class="price-tag">{{ item.priceDisplay || formatCurrency(item.price) }}</span>
+                  <span class="price-tag">
+                    {{ getSelectedVariant(item)?.priceDisplay || formatCurrency(getSelectedVariant(item)?.price) }}
+                  </span>
                 </div>
                 <h3>{{ item.name }}</h3>
-                <p class="card-copy">{{ [item.size, item.calories !== null ? `${item.calories} cal` : ''].filter(Boolean).join(' • ') }}</p>
-                <BaseButton size="sm" @click="addToCart(item)">Add to Order</BaseButton>
+                <p class="card-copy">
+                  {{
+                    [
+                      getSelectedVariant(item)?.size,
+                      getSelectedVariant(item)?.calories !== null && getSelectedVariant(item)?.calories !== undefined
+                        ? `${getSelectedVariant(item)?.calories} cal`
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' • ')
+                  }}
+                </p>
+                <div v-if="item.variants.length > 1" class="size-toggle-group">
+                  <button
+                    v-for="variant in item.variants"
+                    :key="variant.id"
+                    type="button"
+                    :class="['size-toggle', { 'size-toggle--active': getSelectedVariant(item)?.id === variant.id }]"
+                    @click="selectVariant(item.id, variant.id)"
+                  >
+                    {{ variant.size }}
+                  </button>
+                </div>
+                <BaseButton size="sm" @click="addToCart(buildCartItem(item))">Add to Order</BaseButton>
               </article>
             </div>
 
