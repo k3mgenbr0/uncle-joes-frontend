@@ -496,6 +496,31 @@ select {
   margin-top: 1rem;
 }
 
+.orders-toggle {
+  display: inline-flex;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  width: fit-content;
+  border-radius: var(--radius-pill);
+  background: rgba(228, 206, 175, 0.3);
+}
+
+.orders-toggle__button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 0.7rem 1.1rem;
+  background: transparent;
+  color: rgba(46, 24, 8, 0.8);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.orders-toggle__button--active {
+  background: var(--color-white);
+  color: var(--color-walnut);
+  box-shadow: 0 8px 20px rgba(86, 42, 14, 0.08);
+}
+
 .filters-grid,
 .detail-grid {
   display: grid;
@@ -636,6 +661,16 @@ select {
   gap: 1.5rem;
 }
 
+.order-builder-layout--sticky {
+  align-items: start;
+}
+
+.order-builder-sidebar,
+.orders-builder-main {
+  display: grid;
+  gap: 1.25rem;
+}
+
 .order-builder-store {
   display: grid;
   gap: 1rem;
@@ -709,6 +744,11 @@ select {
 
 .order-confirmation-card {
   margin-top: 1.25rem;
+}
+
+.orders-overview-grid {
+  display: grid;
+  gap: 0.85rem;
 }
 
 .auth-container {
@@ -862,12 +902,21 @@ select {
     align-items: start;
   }
 
+  .order-builder-sidebar {
+    position: sticky;
+    top: 5.5rem;
+  }
+
   .order-menu-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .cart-line {
     grid-template-columns: minmax(0, 1.4fr) auto auto auto;
+  }
+
+  .orders-overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .nav-toggle {
@@ -903,6 +952,15 @@ select {
 
   .filters-actions {
     justify-content: stretch;
+  }
+
+  .orders-toggle {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .orders-toggle__button {
+    flex: 1;
   }
 
   .hero-actions,
