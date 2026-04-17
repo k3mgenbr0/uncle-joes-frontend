@@ -102,35 +102,33 @@ onMounted(() => {
           <p class="eyebrow">Member Details</p>
           <h2>{{ authStore.memberDisplayName }}</h2>
           <dl class="member-details">
-            <div>
+            <div v-if="authStore.currentUser?.email">
               <dt>Email</dt>
-              <dd>{{ authStore.currentUser?.email || 'Unavailable' }}</dd>
+              <dd>{{ authStore.currentUser.email }}</dd>
             </div>
-            <div>
+            <div v-if="authStore.currentUser?.tier">
               <dt>Rewards Tier</dt>
-              <dd>{{ authStore.currentUser?.tier || 'Standard' }}</dd>
+              <dd>{{ authStore.currentUser.tier }}</dd>
             </div>
-            <div>
+            <div v-if="authStore.currentUser?.pointsToNextReward !== null && authStore.currentUser?.pointsToNextReward !== undefined">
               <dt>Points to Next Reward</dt>
-              <dd>{{ authStore.currentUser?.pointsToNextReward ?? 'Unavailable' }}</dd>
+              <dd>{{ authStore.currentUser.pointsToNextReward }}</dd>
             </div>
-            <div>
+            <div v-if="authStore.currentUser?.joinDate">
               <dt>Join Date</dt>
               <dd>{{ formatDate(authStore.currentUser?.joinDate) }}</dd>
             </div>
-            <div>
+            <div v-if="authStore.currentUser?.birthdayMonthDay">
               <dt>Birthday</dt>
               <dd>{{ formatMonthDay(authStore.currentUser?.birthdayMonthDay) }}</dd>
             </div>
-            <div>
+            <div v-if="authStore.currentUser?.marketingOptIn !== null && authStore.currentUser?.marketingOptIn !== undefined">
               <dt>Marketing Opt In</dt>
               <dd>
                 {{
-                  authStore.currentUser?.marketingOptIn === null
-                    ? 'Unavailable'
-                    : authStore.currentUser?.marketingOptIn
-                      ? 'Yes'
-                      : 'No'
+                  authStore.currentUser?.marketingOptIn
+                    ? 'Yes'
+                    : 'No'
                 }}
               </dd>
             </div>
@@ -139,7 +137,7 @@ onMounted(() => {
       </div>
 
       <div class="dashboard-hero-grid">
-        <BaseCard class="member-card" padding="lg">
+        <BaseCard v-if="preferredStore" class="member-card" padding="lg">
           <p class="eyebrow">Preferred Store</p>
           <h2>
             {{
@@ -148,16 +146,13 @@ onMounted(() => {
                 : 'No preferred store yet'
             }}
           </h2>
-          <p class="detail-lead">
-            {{ preferredStore?.full_address || 'Set a preferred store in your member profile when available.' }}
-          </p>
+          <p v-if="preferredStore?.full_address" class="detail-lead">{{ preferredStore.full_address }}</p>
           <div class="detail-stack">
-            <p class="detail-lead">Phone: {{ formatPhone(preferredStore?.phone) }}</p>
-            <p class="detail-lead">Member ID: {{ authStore.currentUser?.id }}</p>
+            <p v-if="preferredStore?.phone" class="detail-lead">Phone: {{ formatPhone(preferredStore.phone) }}</p>
           </div>
         </BaseCard>
 
-        <BaseCard padding="lg">
+        <BaseCard v-if="favoritesLoading || favoritesError || favorites.length" padding="lg">
           <p class="eyebrow">Favorites</p>
           <h2>Your go-to orders</h2>
 
@@ -186,7 +181,6 @@ onMounted(() => {
               <span>{{ favorite.totalQuantity }} ordered • {{ favorite.totalOrders }} visits</span>
             </RouterLink>
           </div>
-          <p v-else class="detail-lead">Favorite items will appear here once you have enough order history.</p>
         </BaseCard>
       </div>
 

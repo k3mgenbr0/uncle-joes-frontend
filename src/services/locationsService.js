@@ -26,11 +26,6 @@ function normalizeLocation(location) {
   const hoursToday = location.hours_today ?? null
   const addressOne = location.address ?? location.address_one ?? location.street_address ?? ''
   const addressTwo = location.address_two ?? ''
-  const fullAddress =
-    location.full_address ??
-    [addressOne, addressTwo, location.city, location.state, location.postal_code]
-      .filter(Boolean)
-      .join(', ')
 
   return {
     id: String(location.id ?? location.location_id ?? ''),
@@ -40,8 +35,8 @@ function normalizeLocation(location) {
     state: location.state ?? '',
     address: addressOne,
     addressLineTwo: addressTwo,
-    fullAddress,
-    mapAddress: location.map_address ?? fullAddress,
+    fullAddress: location.full_address ?? '',
+    mapAddress: location.map_address ?? '',
     postalCode: location.postal_code ?? '',
     hours,
     hoursLabel: typeof hours === 'string' ? hours : formatHours(hours),

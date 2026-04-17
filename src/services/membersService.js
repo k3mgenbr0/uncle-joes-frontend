@@ -26,8 +26,8 @@ function normalizeOrderItem(item) {
         `${item.name ?? item.item_name ?? 'item'}`,
     ),
     menuItemId: String(item.menu_item_id ?? item.item_id ?? ''),
-    name: item.name ?? item.item_name ?? 'Menu Item',
-    size: item.size ?? item.item_size ?? 'Standard',
+    name: item.name ?? item.item_name ?? '',
+    size: item.size ?? item.item_size ?? '',
     quantity: Number(item.quantity ?? item.qty ?? 1),
     price: Number(item.price ?? item.unit_price ?? 0),
     unitPrice: Number(item.unit_price ?? item.price ?? 0),
@@ -61,7 +61,7 @@ function normalizeOrder(order) {
 function normalizeFavoriteItem(item) {
   return {
     id: String(item.menu_item_id ?? item.item_id ?? ''),
-    name: item.item_name ?? item.name ?? 'Favorite Item',
+    name: item.item_name ?? item.name ?? '',
     totalOrders: Number(item.total_orders ?? 0),
     totalQuantity: Number(item.total_quantity ?? 0),
     totalRevenue: Number(item.total_revenue ?? 0),

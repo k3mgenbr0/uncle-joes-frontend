@@ -16,17 +16,17 @@ const props = defineProps({
 <template>
   <BaseCard class="location-card">
     <div class="card-topline">
-      <span class="badge">{{ props.location.state || 'Location' }}</span>
-      <strong>{{ props.location.city || props.location.name || 'Uncle Joe\'s Coffee' }}</strong>
+      <span v-if="props.location.state" class="badge">{{ props.location.state }}</span>
+      <strong>{{ props.location.city }}</strong>
     </div>
 
-    <h3>{{ props.location.name || `${props.location.city}, ${props.location.state}` }}</h3>
-    <p class="card-copy">{{ props.location.address || 'Address unavailable' }}</p>
+    <h3>{{ props.location.storeName || props.location.name || [props.location.city, props.location.state].filter(Boolean).join(', ') }}</h3>
+    <p v-if="props.location.address" class="card-copy">{{ props.location.address }}</p>
 
-    <dl class="info-grid info-grid--single">
-      <div>
+    <dl v-if="props.location.hoursTodayLabel || props.location.hoursLabel || props.location.phone" class="info-grid info-grid--single">
+      <div v-if="props.location.hoursTodayLabel || props.location.hoursLabel">
         <dt>Hours</dt>
-        <dd>{{ props.location.hoursTodayLabel || props.location.hoursLabel || 'Hours unavailable' }}</dd>
+        <dd>{{ props.location.hoursTodayLabel || props.location.hoursLabel }}</dd>
       </div>
       <div v-if="props.location.phone">
         <dt>Phone</dt>

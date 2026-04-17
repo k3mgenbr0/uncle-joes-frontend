@@ -2,10 +2,10 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
-import BaseButton from '../components/BaseButton.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { fetchMenuItem } from '../services/menuService'
+import { formatCurrency } from '../utils/formatters'
 
 const route = useRoute()
 const item = ref(null)
@@ -13,6 +13,17 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 
 const itemId = computed(() => route.params.itemId)
+const detailRows = computed(() =>
+  [
+    item.value?.size ? { label: 'Size', value: item.value.size } : null,
+    item.value?.calories !== null && item.value?.calories !== undefined
+      ? { label: 'Calories', value: item.value.calories }
+      : null,
+    item.value?.category ? { label: 'Category', value: item.value.category } : null,
+    item.value?.caffeineMg ? { label: 'Caffeine', value: `${item.value.caffeineMg} mg` } : null,
+    item.value?.availabilityStatus ? { label: 'Availability', value: item.value.availabilityStatus } : null,
+  ].filter(Boolean),
+)
 
 async function loadItem() {
   isLoading.value = true
@@ -67,81 +78,54 @@ onMounted(loadItem)
             <img :src="item.image" :alt="item.name" class="detail-image" />
           </div>
           <div class="card-topline">
-            <span class="badge">{{ item.category || 'Menu Item' }}</span>
-            <span class="price-tag">${{ item.price.toFixed(2) }}</span>
+            <span v-if="item.category" class="badge">{{ item.category }}</span>
+            <span class="price-tag">{{ item.priceDisplay || formatCurrency(item.price) }}</span>
           </div>
           <h1>{{ item.name }}</h1>
-          <p class="detail-lead">
-            {{ item.description || 'This item is available now at Uncle Joe\'s Coffee Company.' }}
-          </p>
+          <p v-if="item.description" class="detail-lead">{{ item.description }}</p>
 
-          <div class="service-badges">
+          <div v-if="item.availabilityStatus || item.seasonal || item.tags.length" class="service-badges">
             <span v-if="item.availabilityStatus" class="badge">{{ item.availabilityStatus }}</span>
             <span v-if="item.seasonal" class="badge">Seasonal</span>
             <span v-for="tag in item.tags" :key="tag" class="badge">{{ tag }}</span>
           </div>
 
-          <div class="detail-grid">
-            <div>
-              <span class="detail-label">Size</span>
-              <strong>{{ item.size || 'Standard' }}</strong>
-            </div>
-            <div>
-              <span class="detail-label">Calories</span>
-              <strong>{{ item.calories ?? 'N/A' }}</strong>
-            </div>
-            <div>
-              <span class="detail-label">Category</span>
-              <strong>{{ item.category || 'Uncategorized' }}</strong>
-            </div>
-            <div>
-              <span class="detail-label">Item ID</span>
-              <strong>{{ item.id }}</strong>
-            </div>
-            <div>
-              <span class="detail-label">Caffeine</span>
-              <strong>{{ item.caffeineMg ? `${item.caffeineMg} mg` : 'N/A' }}</strong>
-            </div>
-            <div>
-              <span class="detail-label">Availability</span>
-              <strong>{{ item.availabilityStatus || 'Available' }}</strong>
+          <div v-if="detailRows.length" class="detail-grid">
+            <div v-for="row in detailRows" :key="row.label">
+              <span class="detail-label">{{ row.label }}</span>
+              <strong>{{ row.value }}</strong>
             </div>
           </div>
         </BaseCard>
 
-        <div class="detail-sidebar">
-          <BaseCard padding="lg">
+        <div v-if="item.ingredients.length || item.allergens.length || item.customizationOptions.length || item.relatedItems.length" class="detail-sidebar">
+          <BaseCard v-if="item.ingredients.length" padding="lg">
             <p class="eyebrow">Ingredients</p>
             <h2>What’s in the cup</h2>
-            <ul v-if="item.ingredients.length" class="detail-list">
+            <ul class="detail-list">
               <li v-for="ingredient in item.ingredients" :key="ingredient">{{ ingredient }}</li>
             </ul>
-            <p v-else class="detail-lead">Ingredient details are not available for this item yet.</p>
           </BaseCard>
 
-          <BaseCard padding="lg">
+          <BaseCard v-if="item.allergens.length || item.customizationOptions.length" padding="lg">
             <p class="eyebrow">Allergens & Customization</p>
             <h2>Order with confidence</h2>
             <div class="detail-stack">
-              <div>
+              <div v-if="item.allergens.length">
                 <span class="detail-label">Allergens</span>
-                <p class="detail-lead">
-                  {{ item.allergens.length ? item.allergens.join(', ') : 'No allergen information listed.' }}
-                </p>
+                <p class="detail-lead">{{ item.allergens.join(', ') }}</p>
               </div>
-              <div>
+              <div v-if="item.customizationOptions.length">
                 <span class="detail-label">Customization Options</span>
-                <p class="detail-lead">
-                  {{ item.customizationOptions.length ? item.customizationOptions.join(', ') : 'No customizations listed.' }}
-                </p>
+                <p class="detail-lead">{{ item.customizationOptions.join(', ') }}</p>
               </div>
             </div>
           </BaseCard>
 
-          <BaseCard padding="lg">
+          <BaseCard v-if="item.relatedItems.length" padding="lg">
             <p class="eyebrow">Related Picks</p>
             <h2>More to explore</h2>
-            <div v-if="item.relatedItems.length" class="related-links">
+            <div class="related-links">
               <RouterLink
                 v-for="related in item.relatedItems"
                 :key="related.id"
@@ -149,13 +133,13 @@ onMounted(loadItem)
                 class="related-link"
               >
                 <strong>{{ related.name }}</strong>
-                <span>{{ related.category || 'Menu Item' }}<template v-if="related.price !== null"> • ${{ Number(related.price).toFixed(2) }}</template></span>
+                <span>
+                  <template v-if="related.category">{{ related.category }}</template>
+                  <template v-if="related.category && related.price !== null"> • </template>
+                  <template v-if="related.price !== null">{{ formatCurrency(related.price) }}</template>
+                </span>
               </RouterLink>
             </div>
-            <p v-else class="detail-lead">No related items are available yet.</p>
-            <RouterLink :to="{ name: 'menu' }">
-              <BaseButton variant="secondary">Browse More Drinks</BaseButton>
-            </RouterLink>
           </BaseCard>
         </div>
       </div>

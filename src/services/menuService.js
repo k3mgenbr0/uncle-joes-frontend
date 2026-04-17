@@ -3,9 +3,9 @@ import { apiFetch, extractCollection, extractRecord, getErrorMessage } from './a
 function normalizeMenuItem(item) {
   return {
     id: String(item.id ?? item.item_id ?? item.menu_item_id ?? ''),
-    name: item.name ?? item.item_name ?? 'Menu Item',
-    category: item.category ?? item.type ?? 'Uncategorized',
-    size: item.size ?? item.default_size ?? 'Standard',
+    name: item.name ?? item.item_name ?? '',
+    category: item.category ?? item.type ?? '',
+    size: item.size ?? item.default_size ?? '',
     calories: item.calories ?? item.calorie_count ?? null,
     price: Number(item.price ?? item.unit_price ?? 0),
     priceDisplay: item.price_display ?? '',
@@ -21,7 +21,7 @@ function normalizeMenuItem(item) {
     relatedItems: Array.isArray(item.related_items)
       ? item.related_items.map((related) => ({
           id: String(related.item_id ?? related.menu_item_id ?? related.id ?? ''),
-          name: related.name ?? related.item_name ?? 'Menu Item',
+          name: related.name ?? related.item_name ?? '',
           category: related.category ?? '',
           size: related.size ?? '',
           price: related.price ?? null,

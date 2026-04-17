@@ -89,10 +89,6 @@ onMounted(loadOrder)
               <span class="detail-label">Points Redeemed</span>
               <strong>{{ order.pointsRedeemed || 0 }}</strong>
             </div>
-            <div>
-              <span class="detail-label">Store ID</span>
-              <strong>{{ order.storeId || 'Unavailable' }}</strong>
-            </div>
           </div>
         </BaseCard>
 
@@ -112,18 +108,18 @@ onMounted(loadOrder)
             <p v-else class="detail-lead">No line items are available for this order.</p>
           </BaseCard>
 
-          <BaseCard padding="lg">
+          <BaseCard v-if="order.paymentSummary" padding="lg">
             <p class="eyebrow">Payment</p>
             <h2>Summary</h2>
             <div class="detail-stack">
               <p class="detail-lead">Total: {{ formatCurrency(order.total) }}</p>
               <p class="detail-lead">
                 Payment method:
-                {{ order.paymentSummary?.payment_method || order.paymentSummary?.method || 'Unavailable' }}
+                {{ order.paymentSummary?.payment_method || order.paymentSummary?.method }}
               </p>
               <p class="detail-lead">
                 Status:
-                {{ order.paymentSummary?.status || 'Unavailable' }}
+                {{ order.paymentSummary?.status }}
               </p>
             </div>
             <RouterLink :to="{ name: 'menu' }">

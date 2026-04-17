@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
-import BaseButton from '../components/BaseButton.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { fetchLocation } from '../services/locationsService'
@@ -113,60 +112,54 @@ onMounted(loadLocation)
           </div>
 
           <h1>{{ formatStoreLabel(location.name, location.city, location.state) }}</h1>
-          <p class="detail-lead">{{ location.fullAddress || location.address || 'Address unavailable' }}</p>
+          <div class="detail-stack">
+            <p v-if="location.address" class="detail-lead">{{ location.address }}</p>
+            <p v-if="location.addressLineTwo" class="detail-lead">{{ location.addressLineTwo }}</p>
+            <p v-if="location.city || location.state || location.postalCode" class="detail-lead">
+              {{ [location.city, location.state, location.postalCode].filter(Boolean).join(', ') }}
+            </p>
+          </div>
 
-          <div class="detail-grid">
-            <div>
+          <div v-if="location.hoursTodayLabel || location.phone || location.email" class="detail-grid">
+            <div v-if="location.hoursTodayLabel">
               <span class="detail-label">Today</span>
-              <strong>{{ location.hoursTodayLabel || 'Hours unavailable' }}</strong>
+              <strong>{{ location.hoursTodayLabel }}</strong>
             </div>
-            <div>
+            <div v-if="location.phone">
               <span class="detail-label">Phone</span>
               <strong>{{ formatPhone(location.phone) }}</strong>
             </div>
-            <div>
+            <div v-if="location.email">
               <span class="detail-label">Email</span>
-              <strong>{{ location.email || 'Unavailable' }}</strong>
-            </div>
-            <div>
-              <span class="detail-label">Store ID</span>
-              <strong>{{ location.id }}</strong>
+              <strong>{{ location.email }}</strong>
             </div>
           </div>
 
-          <div class="service-badges">
+          <div v-if="services.length" class="service-badges">
             <span v-for="service in services" :key="service.label" class="badge">
               {{ service.label }}
             </span>
           </div>
 
-          <div class="hero-actions">
-            <a v-if="mapUrl" :href="mapUrl" target="_blank" rel="noreferrer">
-              <BaseButton>Open in Maps</BaseButton>
-            </a>
-            <a v-if="location.phone" :href="`tel:${location.phone}`">
-              <BaseButton variant="secondary">Call Store</BaseButton>
-            </a>
-          </div>
+          <p v-if="location.nearBy" class="detail-lead">{{ location.nearBy }}</p>
         </BaseCard>
 
-        <BaseCard padding="lg">
+        <BaseCard v-if="weeklyHours.length" padding="lg">
           <p class="eyebrow">Weekly Hours</p>
           <h2>Plan your next coffee stop</h2>
 
-          <div v-if="weeklyHours.length" class="hours-list">
+          <div class="hours-list">
             <div v-for="entry in weeklyHours" :key="entry.day" class="hours-row">
               <span>{{ entry.day }}</span>
               <strong>{{ entry.label }}</strong>
             </div>
           </div>
-          <p v-else class="detail-lead">Weekly hours are not available for this store yet.</p>
         </BaseCard>
 
-        <BaseCard padding="lg">
+        <BaseCard v-if="location.holidayHours.length" padding="lg">
           <p class="eyebrow">Holiday Hours</p>
           <h2>Special schedule updates</h2>
-          <div v-if="location.holidayHours.length" class="hours-list">
+          <div class="hours-list">
             <div v-for="entry in location.holidayHours" :key="entry.date" class="hours-row">
               <span>{{ formatDate(entry.date, { month: 'long', day: 'numeric', year: 'numeric' }) }}</span>
               <strong>
@@ -178,7 +171,6 @@ onMounted(loadLocation)
               </strong>
             </div>
           </div>
-          <p v-else class="detail-lead">No holiday schedule adjustments are posted right now.</p>
         </BaseCard>
       </div>
     </div>

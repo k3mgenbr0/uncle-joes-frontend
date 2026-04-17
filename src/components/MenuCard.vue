@@ -13,19 +13,19 @@ const props = defineProps({
 <template>
   <BaseCard class="menu-card">
     <div class="card-topline">
-      <span class="badge">{{ props.item.category }}</span>
+      <span v-if="props.item.category" class="badge">{{ props.item.category }}</span>
       <span class="price-tag">${{ props.item.price.toFixed(2) }}</span>
     </div>
     <h3>{{ props.item.name }}</h3>
-    <p class="card-copy">{{ props.item.description || 'Freshly prepared and ready for your next coffee break.' }}</p>
-    <dl class="info-grid">
-      <div>
+    <p v-if="props.item.description" class="card-copy">{{ props.item.description }}</p>
+    <dl v-if="props.item.size || props.item.calories !== null" class="info-grid">
+      <div v-if="props.item.size">
         <dt>Size</dt>
         <dd>{{ props.item.size }}</dd>
       </div>
-      <div>
+      <div v-if="props.item.calories !== null">
         <dt>Calories</dt>
-        <dd>{{ props.item.calories ?? 'N/A' }}</dd>
+        <dd>{{ props.item.calories }}</dd>
       </div>
     </dl>
     <RouterLink
