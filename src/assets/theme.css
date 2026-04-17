@@ -44,7 +44,8 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -731,6 +732,19 @@ select {
   margin: 0;
 }
 
+.favorite-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-caramel);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.favorite-toggle[aria-pressed="true"] {
+  color: var(--color-saddle);
+}
+
 .cart-line {
   display: grid;
   gap: 0.9rem;
@@ -801,8 +815,17 @@ select {
   color: rgba(46, 24, 8, 0.7);
 }
 
+.helper-text--compact {
+  font-size: 0.92rem;
+}
+
 .helper-text--error {
   color: #9e3219;
+}
+
+.base-textarea {
+  min-height: 5.75rem;
+  resize: vertical;
 }
 
 .points-summary {

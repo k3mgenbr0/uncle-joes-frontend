@@ -3,7 +3,7 @@ import BaseCard from './BaseCard.vue'
 import LoadingState from './LoadingState.vue'
 import ErrorState from './ErrorState.vue'
 import EmptyState from './EmptyState.vue'
-import { formatCurrency, formatDate, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatOrderStatus, formatStoreLabel } from '../utils/formatters'
 
 defineProps({
   orders: {
@@ -68,6 +68,11 @@ const emit = defineEmits(['retry'])
           <div>
             <h3>{{ formatDate(order.date) }}</h3>
             <p>{{ formatStoreLabel(order.locationName, order.city, order.state) }}</p>
+            <p v-if="order.orderStatus || order.pickupTime">
+              <template v-if="order.orderStatus">{{ formatOrderStatus(order.orderStatus) }}</template>
+              <template v-if="order.orderStatus && order.pickupTime"> • </template>
+              <template v-if="order.pickupTime">Pickup {{ formatDateTime(order.pickupTime) }}</template>
+            </p>
           </div>
           <strong>{{ formatCurrency(order.total) }}</strong>
         </div>

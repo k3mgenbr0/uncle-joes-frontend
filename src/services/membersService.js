@@ -43,9 +43,17 @@ function normalizeOrder(order) {
     memberId: String(order.member_id ?? ''),
     storeId: String(order.store_id ?? ''),
     date: order.order_date ?? order.date ?? order.created_at ?? '',
+    pickupTime: order.pickup_time ?? '',
+    readyByEstimate: order.ready_by_estimate ?? '',
+    submittedAt: order.submitted_at ?? '',
+    orderStatus: order.order_status ?? '',
+    estimatedPrepMinutes: order.estimated_prep_minutes ?? null,
+    specialInstructions: order.special_instructions ?? '',
     locationName: order.location_name ?? order.store_name ?? '',
     city: order.city ?? order.store_city ?? '',
     state: order.state ?? order.store_state ?? '',
+    storePhone: order.store_phone ?? order.phone ?? '',
+    location: order.location ?? null,
     itemsSubtotal: Number(order.items_subtotal ?? order.subtotal ?? 0),
     discount: Number(order.order_discount ?? order.discount ?? 0),
     tax: Number(order.sales_tax ?? order.tax ?? 0),
@@ -62,6 +70,11 @@ function normalizeFavoriteItem(item) {
   return {
     id: String(item.menu_item_id ?? item.item_id ?? ''),
     name: item.item_name ?? item.name ?? '',
+    category: item.category ?? '',
+    size: item.size ?? '',
+    currentPrice: Number(item.current_price ?? 0),
+    imageUrl: item.image_url ?? '',
+    isExplicit: Boolean(item.is_explicit ?? false),
     totalOrders: Number(item.total_orders ?? 0),
     totalQuantity: Number(item.total_quantity ?? 0),
     totalRevenue: Number(item.total_revenue ?? 0),
@@ -168,6 +181,36 @@ export async function fetchSessionMemberFavorites(options = {}) {
   }
 }
 
+export async function createFavorite(menuItemId) {
+  try {
+    const response = await apiFetch('/api/member/favorites', {
+      method: 'POST',
+      auth: true,
+      data: {
+        menu_item_id: menuItemId,
+      },
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    return extractRecord(response, ['data', 'result']) ?? response
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not save that favorite right now.'))
+  }
+}
+
+export async function deleteFavorite(menuItemId) {
+  try {
+    const response = await apiFetch(`/api/member/favorites/${menuItemId}`, {
+      method: 'DELETE',
+      auth: true,
+    })
+    return extractRecord(response, ['data', 'result']) ?? response
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not remove that favorite right now.'))
+  }
+}
+
 export async function fetchMemberPoints(memberId) {
   try {
     const response = await apiFetch(`/members/${memberId}/points`, { auth: true })
@@ -209,7 +252,7 @@ export async function fetchMemberFavorites(memberId) {
 
 export async function fetchOrderDetail(orderId) {
   try {
-    const response = await apiFetch(`/orders/${orderId}`, { auth: true })
+    const response = await apiFetch(`/api/member/orders/${orderId}`, { auth: true })
     return normalizeOrder(extractRecord(response, ['order', 'data', 'detail']) ?? {})
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load that order right now.'))

@@ -8,11 +8,11 @@ import DashboardPoints from '../components/DashboardPoints.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
-import { fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
-import { fetchMenu, groupMenuItems } from '../services/menuService'
+import { createFavorite, deleteFavorite, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
+import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
 import { fetchLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
-import { formatCurrency, formatDateTime, formatFeatureError, formatPhone, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatFeatureError, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const router = useRouter()
 const activePanel = ref('builder')
@@ -29,15 +29,19 @@ const builderError = ref('')
 const submitError = ref('')
 const submitSuccess = ref(null)
 const isSubmitting = ref(false)
+const favoriteError = ref('')
 const selectedStoreId = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
 const selectedVariantByGroup = ref({})
+const pickupTime = ref('')
+const specialInstructions = ref('')
 const orderSearchTerm = ref('')
-const selectedOrderState = ref('All')
+const selectedOrderStatus = ref('All')
 const orderSort = ref('newest')
 const visibleOrderCount = ref(6)
 const cart = ref([])
+const explicitFavoriteIds = ref(new Set())
 
 const pointsHistory = computed(() =>
   orders.value.slice(0, 6).map((order) => ({
@@ -63,28 +67,29 @@ const filteredMenuItems = computed(() =>
   }),
 )
 
-const orderStates = computed(() => [
+const orderStatuses = computed(() => [
   'All',
-  ...Array.from(new Set(orders.value.map((order) => order.state).filter(Boolean))).sort(),
+  ...Array.from(new Set(orders.value.map((order) => order.orderStatus).filter(Boolean))).sort(),
 ])
 
 const filteredOrders = computed(() => {
   const query = orderSearchTerm.value.trim().toLowerCase()
 
   const results = orders.value.filter((order) => {
-    const matchesState = selectedOrderState.value === 'All' || order.state === selectedOrderState.value
+    const matchesStatus = selectedOrderStatus.value === 'All' || order.orderStatus === selectedOrderStatus.value
     const matchesSearch =
       !query ||
       [
         order.locationName,
         order.city,
         order.state,
+        formatOrderStatus(order.orderStatus),
         ...order.items.map((item) => item.name),
       ]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query))
 
-    return matchesState && matchesSearch
+    return matchesStatus && matchesSearch
   })
 
   return [...results].sort((left, right) => {
@@ -150,13 +155,62 @@ function buildCartItem(group) {
     price: variant.price,
     priceDisplay: variant.priceDisplay,
     calories: variant.calories,
+    availableAtStore: variant.availableAtStore,
   }
+}
+
+function syncSelectedVariants(items) {
+  const groupedItems = groupMenuItems(items)
+
+  selectedVariantByGroup.value = groupedItems.reduce((result, group) => {
+    const previousSelection = selectedVariantByGroup.value[group.id]
+    const matchingVariant = group.variants.find((variant) => variant.id === previousSelection)
+
+    result[group.id] = matchingVariant?.id ?? group.defaultVariant?.id ?? group.variants[0]?.id ?? ''
+    return result
+  }, {})
+}
+
+function applyMenuItems(items) {
+  menuItems.value = items
+  syncSelectedVariants(items)
 }
 
 function selectVariant(groupId, variantId) {
   selectedVariantByGroup.value = {
     ...selectedVariantByGroup.value,
     [groupId]: variantId,
+  }
+}
+
+function isFavorite(group) {
+  return group.variants.some((variant) => explicitFavoriteIds.value.has(variant.id))
+}
+
+async function toggleFavorite(group) {
+  favoriteError.value = ''
+  const currentFavoriteVariant = group.variants.find((variant) => explicitFavoriteIds.value.has(variant.id))
+  const targetVariant = currentFavoriteVariant ?? getSelectedVariant(group)
+
+  if (!targetVariant?.id) {
+    return
+  }
+
+  try {
+    if (currentFavoriteVariant) {
+      await deleteFavorite(currentFavoriteVariant.id)
+      const next = new Set(explicitFavoriteIds.value)
+      next.delete(currentFavoriteVariant.id)
+      explicitFavoriteIds.value = next
+      return
+    }
+
+    await createFavorite(targetVariant.id)
+    const next = new Set(explicitFavoriteIds.value)
+    next.add(targetVariant.id)
+    explicitFavoriteIds.value = next
+  } catch (error) {
+    favoriteError.value = error.message
   }
 }
 
@@ -189,7 +243,7 @@ function addToCart(item) {
   })
 }
 
-function addOrderToCart(order) {
+async function addOrderToCart(order) {
   order.items.forEach((item) => {
     addToCart({
       id: item.menuItemId,
@@ -200,8 +254,9 @@ function addOrderToCart(order) {
     })
   })
 
-  if (order.storeId) {
+  if (order.storeId && order.storeId !== selectedStoreId.value) {
     selectedStoreId.value = order.storeId
+    await refreshMenuForSelectedStore()
   }
 
   activePanel.value = 'builder'
@@ -228,7 +283,7 @@ function removeFromCart(key) {
 
 function clearOrderFilters() {
   orderSearchTerm.value = ''
-  selectedOrderState.value = 'All'
+  selectedOrderStatus.value = 'All'
   orderSort.value = 'newest'
   visibleOrderCount.value = 6
 }
@@ -267,23 +322,42 @@ async function loadPoints() {
 async function loadBuilderData() {
   builderLoading.value = true
   builderError.value = ''
+  favoriteError.value = ''
 
   try {
-    const [menuResult, locationResult] = await Promise.all([
-      fetchMenu(),
+    const [locationResult, favorites] = await Promise.all([
       fetchLocations(),
+      fetchSessionMemberFavorites({ limit: 50 }),
     ])
-    menuItems.value = menuResult
-    selectedVariantByGroup.value = groupMenuItems(menuResult).reduce((result, group) => {
-      if (group.defaultVariant?.id) {
-        result[group.id] = group.defaultVariant.id
-      }
-      return result
-    }, {})
     locations.value = locationResult
+
     if (!selectedStoreId.value && locationResult.length) {
       selectedStoreId.value = locationResult[0].id
     }
+
+    const menuResult = await fetchMenuForStore(selectedStoreId.value)
+    applyMenuItems(menuResult)
+
+    explicitFavoriteIds.value = new Set(
+      favorites
+        .filter((favorite) => favorite.isExplicit)
+        .map((favorite) => favorite.id),
+    )
+  } catch (error) {
+    builderError.value = error.message
+  } finally {
+    builderLoading.value = false
+  }
+}
+
+async function refreshMenuForSelectedStore() {
+  builderLoading.value = true
+  builderError.value = ''
+  favoriteError.value = ''
+
+  try {
+    const menuResult = await fetchMenuForStore(selectedStoreId.value)
+    applyMenuItems(menuResult)
   } catch (error) {
     builderError.value = error.message
   } finally {
@@ -316,10 +390,14 @@ async function submitOrder() {
         size: item.size || null,
       })),
       payment_method: 'pay_in_store',
+      pickup_time: pickupTime.value || null,
+      special_instructions: specialInstructions.value.trim() || null,
     })
 
     submitSuccess.value = createdOrder
     cart.value = []
+    pickupTime.value = ''
+    specialInstructions.value = ''
     activePanel.value = 'history'
     await Promise.all([loadOrders(), loadPoints()])
     if (createdOrder?.id || createdOrder?.order_id) {
@@ -420,7 +498,7 @@ onMounted(() => {
           <div v-else class="order-builder-store">
             <label class="input-group">
               <span class="input-label">Pickup store</span>
-              <select v-model="selectedStoreId" class="base-input base-select">
+              <select v-model="selectedStoreId" class="base-input base-select" @change="refreshMenuForSelectedStore">
                 <option disabled value="">Choose a store</option>
                 <option
                   v-for="location in locations"
@@ -440,6 +518,22 @@ onMounted(() => {
             </div>
 
             <div class="order-summary">
+              <label class="input-group">
+                <span class="input-label">Pickup time</span>
+                <input v-model="pickupTime" class="base-input" type="datetime-local" />
+              </label>
+              <label class="input-group">
+                <span class="input-label">Special instructions</span>
+                <textarea
+                  v-model="specialInstructions"
+                  class="base-input base-textarea"
+                  rows="3"
+                  placeholder="Extra hot, no whip, or pickup notes"
+                ></textarea>
+              </label>
+              <p class="helper-text helper-text--compact">
+                Choose a pickup time if you want the store to aim for a specific handoff window.
+              </p>
               <div class="hours-row">
                 <span>Items</span>
                 <strong>{{ cartItemCount }}</strong>
@@ -535,6 +629,22 @@ onMounted(() => {
                   </span>
                 </div>
                 <h3>{{ item.name }}</h3>
+                <div class="card-topline">
+                  <span
+                    v-if="getSelectedVariant(item)?.storeAvailabilityStatus"
+                    class="helper-text helper-text--compact"
+                  >
+                    {{ getSelectedVariant(item)?.storeAvailabilityStatus }}
+                  </span>
+                  <button
+                    class="favorite-toggle"
+                    type="button"
+                    :aria-pressed="isFavorite(item)"
+                    @click="toggleFavorite(item)"
+                  >
+                    {{ isFavorite(item) ? 'Remove Favorite' : 'Save Favorite' }}
+                  </button>
+                </div>
                 <p class="card-copy">
                   {{
                     [
@@ -558,9 +668,17 @@ onMounted(() => {
                     {{ variant.size }}
                   </button>
                 </div>
-                <BaseButton size="sm" @click="addToCart(buildCartItem(item))">Add to Order</BaseButton>
+                <BaseButton
+                  size="sm"
+                  :disabled="getSelectedVariant(item)?.availableAtStore === false"
+                  @click="addToCart(buildCartItem(item))"
+                >
+                  {{ getSelectedVariant(item)?.availableAtStore === false ? 'Unavailable at Store' : 'Add to Order' }}
+                </BaseButton>
               </article>
             </div>
+
+            <p v-if="favoriteError" class="helper-text helper-text--error">{{ favoriteError }}</p>
 
             <EmptyState
               v-else-if="!builderLoading && !builderError"
@@ -584,15 +702,15 @@ onMounted(() => {
                   v-model="orderSearchTerm"
                   class="base-input"
                   type="text"
-                  placeholder="Search by store or item"
+                  placeholder="Search by store, status, or item"
                 />
               </label>
 
               <label class="input-group">
-                <span class="input-label">State</span>
-                <select v-model="selectedOrderState" class="base-input base-select">
-                  <option v-for="state in orderStates" :key="state" :value="state">
-                    {{ state }}
+                <span class="input-label">Status</span>
+                <select v-model="selectedOrderStatus" class="base-input base-select">
+                  <option v-for="status in orderStatuses" :key="status" :value="status">
+                    {{ status === 'All' ? status : formatOrderStatus(status) }}
                   </option>
                 </select>
               </label>

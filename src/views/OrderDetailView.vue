@@ -6,7 +6,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { fetchOrderDetail } from '../services/membersService'
-import { formatCurrency, formatDateTime, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
 const order = ref(null)
@@ -69,6 +69,22 @@ onMounted(loadOrder)
           <p class="detail-lead">{{ formatDateTime(order.date) }}</p>
 
           <div class="detail-grid">
+            <div class="detail-grid__item" v-if="order.pickupTime">
+              <span class="detail-label">Pickup Time</span>
+              <strong class="detail-value">{{ formatDateTime(order.pickupTime) }}</strong>
+            </div>
+            <div class="detail-grid__item" v-if="order.readyByEstimate">
+              <span class="detail-label">Ready By</span>
+              <strong class="detail-value">{{ formatDateTime(order.readyByEstimate) }}</strong>
+            </div>
+            <div class="detail-grid__item" v-if="order.orderStatus">
+              <span class="detail-label">Status</span>
+              <strong class="detail-value">{{ formatOrderStatus(order.orderStatus) }}</strong>
+            </div>
+            <div class="detail-grid__item" v-if="order.estimatedPrepMinutes !== null && order.estimatedPrepMinutes !== undefined">
+              <span class="detail-label">Estimated Prep</span>
+              <strong class="detail-value">{{ order.estimatedPrepMinutes }} min</strong>
+            </div>
             <div>
               <span class="detail-label">Subtotal</span>
               <strong>{{ formatCurrency(order.itemsSubtotal) }}</strong>
@@ -88,6 +104,14 @@ onMounted(loadOrder)
             <div>
               <span class="detail-label">Points Redeemed</span>
               <strong>{{ order.pointsRedeemed || 0 }}</strong>
+            </div>
+            <div v-if="order.storePhone" class="detail-grid__item">
+              <span class="detail-label">Store Phone</span>
+              <strong class="detail-value">{{ formatPhone(order.storePhone) }}</strong>
+            </div>
+            <div v-if="order.specialInstructions" class="detail-grid__item">
+              <span class="detail-label">Instructions</span>
+              <strong class="detail-value">{{ order.specialInstructions }}</strong>
             </div>
           </div>
         </BaseCard>

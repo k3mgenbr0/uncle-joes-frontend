@@ -157,6 +157,23 @@ export function formatTitleCase(value) {
     .replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
+export function formatOrderStatus(value) {
+  if (!value) {
+    return 'Status unavailable'
+  }
+
+  const labels = {
+    order_received: 'Order Received',
+    brewing: 'Brewing',
+    finishing_touches: 'Finishing Touches',
+    ready_for_pickup: 'Ready for Pickup',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  }
+
+  return labels[value] || formatTitleCase(value)
+}
+
 export function formatCityStatePostal(city, state, postalCode) {
   const place = [city, state].filter(Boolean).join(', ')
 

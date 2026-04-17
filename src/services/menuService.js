@@ -24,6 +24,8 @@ function normalizeMenuItem(item) {
     seasonal: item.seasonal ?? null,
     tags: Array.isArray(item.tags) ? item.tags : [],
     customizationOptions: Array.isArray(item.customization_options) ? item.customization_options : [],
+    availableAtStore: item.available_at_store ?? null,
+    storeAvailabilityStatus: item.store_availability_status ?? '',
     relatedItems: Array.isArray(item.related_items)
       ? item.related_items.map((related) => ({
           id: String(related.item_id ?? related.menu_item_id ?? related.id ?? ''),
@@ -74,23 +76,33 @@ export function groupMenuItems(items = []) {
       calories: item.calories,
       price: item.price,
       priceDisplay: item.priceDisplay,
+      availableAtStore: item.availableAtStore,
+      storeAvailabilityStatus: item.storeAvailabilityStatus,
       raw: item,
     })
   })
 
   return Array.from(groups.values())
-    .map((group) => ({
-      ...group,
-      variants: [...group.variants].sort(sortVariantsBySize),
-      defaultVariant: [...group.variants].sort(sortVariantsBySize).find((variant) => variant.size === 'Medium')
-        ?? [...group.variants].sort(sortVariantsBySize)[0],
-    }))
+    .map((group) => {
+      const sortedVariants = [...group.variants].sort(sortVariantsBySize)
+
+      return {
+        ...group,
+        variants: sortedVariants,
+        defaultVariant: sortedVariants.find((variant) => variant.size === 'Medium') ?? sortedVariants[0],
+      }
+    })
     .sort((left, right) => left.name.localeCompare(right.name))
 }
 
 export async function fetchMenu() {
+  return fetchMenuForStore()
+}
+
+export async function fetchMenuForStore(storeId = '') {
   try {
-    const response = await apiFetch('/menu')
+    const path = storeId ? `/menu?store_id=${encodeURIComponent(storeId)}` : '/menu'
+    const response = await apiFetch(path)
     return extractCollection(response, ['items', 'menu', 'data']).map(normalizeMenuItem)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load the menu right now.'))
