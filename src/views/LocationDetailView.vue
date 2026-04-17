@@ -49,6 +49,21 @@ const mapUrl = computed(() => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.value.mapAddress)}`
 })
 
+const mapEmbedUrl = computed(() => {
+  if (location.value?.latitude !== null && location.value?.latitude !== undefined && location.value?.longitude !== null && location.value?.longitude !== undefined) {
+    const latitude = Number(location.value.latitude)
+    const longitude = Number(location.value.longitude)
+    const delta = 0.01
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - delta}%2C${latitude - delta}%2C${longitude + delta}%2C${latitude + delta}&layer=mapnik&marker=${latitude}%2C${longitude}`
+  }
+
+  if (location.value?.mapAddress) {
+    return `https://www.google.com/maps?q=${encodeURIComponent(location.value.mapAddress)}&output=embed`
+  }
+
+  return ''
+})
+
 const weeklyHours = computed(() => {
   const hours = location.value?.hours
 
@@ -173,6 +188,22 @@ onMounted(loadLocation)
               </strong>
             </div>
           </div>
+        </BaseCard>
+
+        <BaseCard v-if="mapEmbedUrl" padding="lg">
+          <p class="eyebrow">Map</p>
+          <h2>Find this store</h2>
+          <div class="map-frame">
+            <iframe
+              :src="mapEmbedUrl"
+              :title="`Map for ${formatStoreLabel(location.name, location.city, location.state)}`"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+          <a v-if="mapUrl" class="card-link" :href="mapUrl" target="_blank" rel="noreferrer">
+            Open directions
+          </a>
         </BaseCard>
       </div>
     </div>

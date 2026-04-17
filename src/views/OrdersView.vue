@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
 import OrderHistory from '../components/OrderHistory.vue'
@@ -13,6 +14,7 @@ import { fetchLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
 import { formatCurrency, formatDateTime, formatFeatureError, formatPhone, formatStoreLabel } from '../utils/formatters'
 
+const router = useRouter()
 const activePanel = ref('builder')
 const orders = ref([])
 const points = ref(0)
@@ -320,6 +322,12 @@ async function submitOrder() {
     cart.value = []
     activePanel.value = 'history'
     await Promise.all([loadOrders(), loadPoints()])
+    if (createdOrder?.id || createdOrder?.order_id) {
+      await router.push({
+        name: 'order-confirmation',
+        params: { orderId: createdOrder.id || createdOrder.order_id },
+      })
+    }
   } catch (error) {
     submitError.value = error.message
   } finally {
@@ -560,24 +568,6 @@ onMounted(() => {
               title="No menu matches your filters"
               description="Try another search term or category."
             />
-          </BaseCard>
-
-          <BaseCard v-if="submitSuccess" class="order-confirmation-card" padding="lg">
-            <p class="eyebrow">Order Confirmed</p>
-            <h2>Ready for pickup</h2>
-            <p class="detail-lead">
-              {{ formatStoreLabel(submitSuccess.locationName || submitSuccess.store_name, submitSuccess.city || submitSuccess.store_city, submitSuccess.state || submitSuccess.store_state) }}
-            </p>
-            <div class="detail-grid">
-              <div class="detail-grid__item">
-                <span class="detail-label">Order Number</span>
-                <strong class="detail-value">{{ submitSuccess.id || submitSuccess.order_id }}</strong>
-              </div>
-              <div class="detail-grid__item">
-                <span class="detail-label">Pay In Store</span>
-                <strong class="detail-value">{{ formatCurrency(submitSuccess.total || submitSuccess.paymentSummary?.total || estimatedTotal) }}</strong>
-              </div>
-            </div>
           </BaseCard>
         </div>
       </div>

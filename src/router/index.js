@@ -8,6 +8,7 @@ import LocationDetailView from '../views/LocationDetailView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
+import OrderConfirmationView from '../views/OrderConfirmationView.vue'
 import OrdersView from '../views/OrdersView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
@@ -61,6 +62,12 @@ const router = createRouter({
       name: 'orders',
       component: OrdersView,
       meta: { title: 'Orders | Uncle Joe\'s Coffee Company', requiresAuth: true },
+    },
+    {
+      path: '/orders/confirmation/:orderId',
+      name: 'order-confirmation',
+      component: OrderConfirmationView,
+      meta: { title: 'Order Confirmed | Uncle Joe\'s Coffee Company', requiresAuth: true },
     },
     {
       path: '/profile',
