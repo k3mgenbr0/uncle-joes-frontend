@@ -13,6 +13,13 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 
 const locationId = computed(() => route.params.locationId)
+const contactRows = computed(() =>
+  [
+    location.value?.hoursTodayLabel ? { label: 'Today', value: location.value.hoursTodayLabel } : null,
+    location.value?.phone ? { label: 'Phone', value: formatPhone(location.value.phone) } : null,
+    location.value?.email ? { label: 'Email', value: location.value.email } : null,
+  ].filter(Boolean),
+)
 
 const services = computed(() => {
   if (!location.value) {
@@ -120,18 +127,10 @@ onMounted(loadLocation)
             </p>
           </div>
 
-          <div v-if="location.hoursTodayLabel || location.phone || location.email" class="detail-grid">
-            <div v-if="location.hoursTodayLabel">
-              <span class="detail-label">Today</span>
-              <strong>{{ location.hoursTodayLabel }}</strong>
-            </div>
-            <div v-if="location.phone">
-              <span class="detail-label">Phone</span>
-              <strong>{{ formatPhone(location.phone) }}</strong>
-            </div>
-            <div v-if="location.email">
-              <span class="detail-label">Email</span>
-              <strong>{{ location.email }}</strong>
+          <div v-if="contactRows.length" class="detail-grid">
+            <div v-for="row in contactRows" :key="row.label">
+              <span class="detail-label">{{ row.label }}</span>
+              <strong>{{ row.value }}</strong>
             </div>
           </div>
 

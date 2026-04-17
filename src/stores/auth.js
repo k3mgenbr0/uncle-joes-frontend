@@ -20,12 +20,14 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(credentials) {
     const member = await loginMember(credentials)
     currentUser.value = member
+    hasRestoredSession.value = true
     return member
   }
 
   async function logout() {
     await logoutMember()
     currentUser.value = null
+    hasRestoredSession.value = true
   }
 
   async function restoreSession() {

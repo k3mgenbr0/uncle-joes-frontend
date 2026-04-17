@@ -1,11 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import BaseCard from '../components/BaseCard.vue'
+import BaseButton from '../components/BaseButton.vue'
 import OrderHistory from '../components/OrderHistory.vue'
 import DashboardPoints from '../components/DashboardPoints.vue'
 import { fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
 import { useAuthStore } from '../stores/auth'
-import { formatCurrency, formatDateTime } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatFeatureError } from '../utils/formatters'
 
 const authStore = useAuthStore()
 const orders = ref([])
@@ -31,7 +32,7 @@ async function loadOrders() {
   try {
     orders.value = await fetchSessionMemberOrders({ includeItems: true, limit: 50 })
   } catch (error) {
-    ordersError.value = error.message
+    ordersError.value = formatFeatureError(error.message, 'Orders')
   } finally {
     ordersLoading.value = false
   }
@@ -45,7 +46,7 @@ async function loadPoints() {
     const result = await fetchSessionMemberPoints()
     points.value = result.value
   } catch (error) {
-    pointsError.value = error.message
+    pointsError.value = formatFeatureError(error.message, 'Rewards')
   } finally {
     pointsLoading.value = false
   }

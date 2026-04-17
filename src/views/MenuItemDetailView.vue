@@ -25,6 +25,10 @@ const detailRows = computed(() =>
   ].filter(Boolean),
 )
 
+function formatDetailValue(value) {
+  return typeof value === 'string' ? value : String(value)
+}
+
 async function loadItem() {
   isLoading.value = true
   errorMessage.value = ''
@@ -93,7 +97,7 @@ onMounted(loadItem)
           <div v-if="detailRows.length" class="detail-grid">
             <div v-for="row in detailRows" :key="row.label">
               <span class="detail-label">{{ row.label }}</span>
-              <strong>{{ row.value }}</strong>
+              <strong>{{ formatDetailValue(row.value) }}</strong>
             </div>
           </div>
         </BaseCard>

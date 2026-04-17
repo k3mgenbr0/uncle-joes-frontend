@@ -50,6 +50,24 @@ export function formatTime(value) {
   }
 
   const normalized = String(value).trim()
+  const compactMatch = normalized.match(/^(\d{3,4})$/)
+
+  if (compactMatch) {
+    const digits = compactMatch[1].padStart(4, '0')
+    const hours = Number(digits.slice(0, 2))
+    const minutes = Number(digits.slice(2, 4))
+
+    if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
+      const date = new Date()
+      date.setHours(hours, minutes, 0, 0)
+
+      return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      }).format(date)
+    }
+  }
+
   const match = normalized.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/)
 
   if (!match) {
@@ -124,4 +142,21 @@ export function formatPhone(value) {
 
 export function formatStoreLabel(locationName, city, state) {
   return locationName || [city, state].filter(Boolean).join(', ') || 'Location unavailable'
+}
+
+export function isAuthErrorMessage(message) {
+  if (!message) {
+    return false
+  }
+
+  const normalized = String(message).toLowerCase()
+  return normalized.includes('401') || normalized.includes('authentication required') || normalized.includes('unauthorized')
+}
+
+export function formatFeatureError(message, fallbackTitle) {
+  if (isAuthErrorMessage(message)) {
+    return `${fallbackTitle} require an active Coffee Club sign-in. Please log in again.`
+  }
+
+  return message
 }

@@ -92,7 +92,12 @@ export async function restoreSession() {
 
     localStorage.removeItem(STORAGE_KEY)
     return null
-  } catch {
+  } catch (error) {
+    if (error?.status === 401) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY)
 
     if (!raw) {

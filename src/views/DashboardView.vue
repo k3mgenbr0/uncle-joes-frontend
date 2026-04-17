@@ -7,7 +7,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchMemberDashboard, fetchMemberFavorites, fetchMemberOrders } from '../services/membersService'
-import { formatMonthDay, formatPhone, formatStoreLabel, formatDate } from '../utils/formatters'
+import { formatMonthDay, formatPhone, formatStoreLabel, formatDate, formatFeatureError } from '../utils/formatters'
 
 const authStore = useAuthStore()
 
@@ -40,9 +40,9 @@ async function loadSummary() {
     orders.value = dashboardResult.orders
     favorites.value = favoritesResult
   } catch (error) {
-    pointsError.value = error.message
-    ordersError.value = error.message
-    favoritesError.value = error.message
+    pointsError.value = formatFeatureError(error.message, 'Rewards')
+    ordersError.value = formatFeatureError(error.message, 'Orders')
+    favoritesError.value = formatFeatureError(error.message, 'Favorites')
   } finally {
     pointsLoading.value = false
     ordersLoading.value = false
@@ -57,7 +57,7 @@ async function loadOrders() {
   try {
     orders.value = await fetchMemberOrders(authStore.currentUser.id)
   } catch (error) {
-    ordersError.value = error.message
+    ordersError.value = formatFeatureError(error.message, 'Orders')
   } finally {
     ordersLoading.value = false
   }
@@ -70,7 +70,7 @@ async function loadFavorites() {
   try {
     favorites.value = await fetchMemberFavorites(authStore.currentUser.id)
   } catch (error) {
-    favoritesError.value = error.message
+    favoritesError.value = formatFeatureError(error.message, 'Favorites')
   } finally {
     favoritesLoading.value = false
   }
