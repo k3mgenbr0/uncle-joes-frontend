@@ -1,5 +1,6 @@
 <script setup>
 import BaseCard from './BaseCard.vue'
+import { isStoreOrderable } from '../services/locationsService'
 import { formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const props = defineProps({
@@ -23,6 +24,13 @@ const props = defineProps({
 
     <h3>{{ formatStoreLabel(props.location.storeName || props.location.name, props.location.city, props.location.state) }}</h3>
     <p v-if="props.location.address" class="card-copy">{{ props.location.address }}</p>
+
+    <p
+      v-if="!isStoreOrderable(props.location) && props.location.availabilityMessage"
+      class="helper-text helper-text--warning"
+    >
+      {{ props.location.availabilityMessage }}
+    </p>
 
     <dl v-if="props.location.hoursTodayLabel || props.location.hoursLabel || props.location.phone" class="info-grid info-grid--single">
       <div v-if="props.location.hoursTodayLabel || props.location.hoursLabel">

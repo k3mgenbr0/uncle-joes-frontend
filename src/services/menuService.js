@@ -101,7 +101,7 @@ export async function fetchMenu() {
 
 export async function fetchMenuForStore(storeId = '') {
   try {
-    const path = storeId ? `/menu?store_id=${encodeURIComponent(storeId)}` : '/menu'
+    const path = storeId ? `/locations/${encodeURIComponent(storeId)}/menu` : '/menu'
     const response = await apiFetch(path)
     return extractCollection(response, ['items', 'menu', 'data']).map(normalizeMenuItem)
   } catch (error) {

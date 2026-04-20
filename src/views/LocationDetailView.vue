@@ -2,9 +2,10 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
+import BaseButton from '../components/BaseButton.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
-import { fetchLocation } from '../services/locationsService'
+import { fetchLocation, isStoreOrderable } from '../services/locationsService'
 import { dedupeLabels, formatCityStatePostal, formatDate, formatHoursRange, formatPhone, formatServiceLabel, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
@@ -159,6 +160,17 @@ onMounted(loadLocation)
               {{ service }}
             </span>
           </div>
+
+          <p
+            v-if="!isStoreOrderable(location) && location.availabilityMessage"
+            class="helper-text helper-text--warning"
+          >
+            {{ location.availabilityMessage }}
+          </p>
+
+          <RouterLink v-if="isStoreOrderable(location)" :to="{ name: 'orders' }">
+            <BaseButton variant="secondary">Start pickup order</BaseButton>
+          </RouterLink>
         </BaseCard>
 
         <BaseCard v-if="weeklyHours.length" padding="lg">

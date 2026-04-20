@@ -7,7 +7,7 @@ import EmptyState from '../components/EmptyState.vue'
 import BaseInput from '../components/BaseInput.vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseCard from '../components/BaseCard.vue'
-import { fetchLocations } from '../services/locationsService'
+import { fetchLocations, isStoreOrderable } from '../services/locationsService'
 
 const locations = ref([])
 const searchTerm = ref('')
@@ -131,6 +131,10 @@ onMounted(loadLocations)
           :location="location"
         />
       </div>
+
+      <p v-if="filteredLocations.some((location) => !isStoreOrderable(location))" class="helper-text helper-text--compact">
+        Stores marked “Coming Soon!” are visible here, but they are not yet available for pickup ordering.
+      </p>
     </div>
   </section>
 </template>

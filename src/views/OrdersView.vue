@@ -10,7 +10,7 @@ import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
-import { fetchLocations } from '../services/locationsService'
+import { fetchOrderableLocations, isStoreOrderable } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
 import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
 
@@ -504,7 +504,7 @@ async function loadBuilderData() {
 
   try {
     const [locationResult, favorites] = await Promise.all([
-      fetchLocations(),
+      fetchOrderableLocations(),
       fetchSessionMemberFavorites({ limit: 50 }),
     ])
     locations.value = locationResult
@@ -550,6 +550,11 @@ async function submitOrder() {
 
   if (!selectedStoreId.value) {
     submitError.value = 'Choose a pickup store before placing your order.'
+    return
+  }
+
+  if (!isStoreOrderable(selectedLocation.value)) {
+    submitError.value = selectedLocation.value?.availabilityMessage || 'This store is not yet open for ordering. Coming Soon!'
     return
   }
 
@@ -702,6 +707,12 @@ onMounted(() => {
               <span v-if="selectedLocation.address">{{ selectedLocation.address }}</span>
               <span v-if="selectedLocation.phone">Phone: {{ formatPhone(selectedLocation.phone) }}</span>
               <span v-if="selectedLocation.hoursTodayLabel">Today: {{ selectedLocation.hoursTodayLabel }}</span>
+              <span
+                v-if="!isStoreOrderable(selectedLocation) && selectedLocation.availabilityMessage"
+                class="helper-text helper-text--warning"
+              >
+                {{ selectedLocation.availabilityMessage }}
+              </span>
             </div>
 
             <div class="order-summary">
@@ -771,7 +782,7 @@ onMounted(() => {
 
             <p v-if="submitError" class="helper-text helper-text--error">{{ submitError }}</p>
 
-            <BaseButton :disabled="isSubmitting || !cart.length || !selectedStoreId" block @click="submitOrder">
+            <BaseButton :disabled="isSubmitting || !cart.length || !selectedStoreId || !isStoreOrderable(selectedLocation)" block @click="submitOrder">
               {{ isSubmitting ? 'Placing Order...' : 'Place Pickup Order' }}
             </BaseButton>
           </div>

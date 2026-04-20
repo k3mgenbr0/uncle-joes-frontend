@@ -26,6 +26,11 @@ function normalizeLocation(location) {
   const hoursToday = location.hours_today ?? null
   const addressOne = location.address ?? location.address_one ?? location.street_address ?? ''
   const addressTwo = location.address_two ?? ''
+  const orderingAvailable = location.ordering_available ?? null
+  const availabilityStatus = location.availability_status ?? ''
+  const availabilityMessage =
+    location.availability_message
+    ?? (orderingAvailable === false && availabilityStatus === 'coming_soon' ? 'Coming Soon!' : '')
 
   return {
     id: String(location.id ?? location.location_id ?? ''),
@@ -48,6 +53,9 @@ function normalizeLocation(location) {
     longitude: location.longitude ?? null,
     openNow: location.open_now ?? null,
     openForBusiness: location.open_for_business ?? null,
+    orderingAvailable,
+    availabilityStatus,
+    availabilityMessage,
     wifi: location.wifi ?? null,
     driveThru: location.drive_thru ?? null,
     doorDash: location.door_dash ?? null,
@@ -60,13 +68,28 @@ function normalizeLocation(location) {
   }
 }
 
-export async function fetchLocations() {
+export function isStoreOrderable(store) {
+  return store?.orderingAvailable === true
+}
+
+export async function fetchLocations(options = {}) {
   try {
-    const response = await apiFetch('/locations')
+    const params = new URLSearchParams()
+
+    if (options.orderableOnly) {
+      params.set('orderable_only', 'true')
+    }
+
+    const path = params.toString() ? `/locations?${params.toString()}` : '/locations'
+    const response = await apiFetch(path)
     return extractCollection(response, ['locations', 'data', 'stores']).map(normalizeLocation)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load locations right now.'))
   }
+}
+
+export async function fetchOrderableLocations() {
+  return fetchLocations({ orderableOnly: true })
 }
 
 export async function fetchLocation(locationId) {
