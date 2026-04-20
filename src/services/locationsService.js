@@ -89,7 +89,8 @@ export async function fetchLocations(options = {}) {
 }
 
 export async function fetchOrderableLocations() {
-  return fetchLocations({ orderableOnly: true })
+  const locations = await fetchLocations({ orderableOnly: true })
+  return locations.filter((location) => location.openForBusiness === true)
 }
 
 export async function fetchLocation(locationId) {
