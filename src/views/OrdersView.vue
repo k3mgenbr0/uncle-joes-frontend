@@ -12,7 +12,7 @@ import { createFavorite, deleteFavorite, fetchSessionMemberFavorites, fetchSessi
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
 import { fetchLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
-import { formatCurrency, formatDateTime, formatFeatureError, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const router = useRouter()
 const activePanel = ref('builder')
@@ -30,6 +30,7 @@ const submitError = ref('')
 const submitSuccess = ref(null)
 const isSubmitting = ref(false)
 const favoriteError = ref('')
+const orderItemsLimited = ref(false)
 const selectedStoreId = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
@@ -126,6 +127,158 @@ const cartSubtotal = computed(() =>
 
 const estimatedTax = computed(() => Number((cartSubtotal.value * 0.07).toFixed(2)))
 const estimatedTotal = computed(() => Number((cartSubtotal.value + estimatedTax.value).toFixed(2)))
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function parseLocalDateTime(value) {
+  if (!value) {
+    return null
+  }
+
+  const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+
+  if (!match) {
+    return null
+  }
+
+  const [, year, month, day, hours, minutes] = match
+  const parsed = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hours),
+    Number(minutes),
+    0,
+    0,
+  )
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function normalizeDayKey(value) {
+  return String(value || '')
+    .trim()
+    .slice(0, 3)
+    .toLowerCase()
+}
+
+function timeToMinutes(value) {
+  if (!value && value !== 0) {
+    return null
+  }
+
+  const normalized = String(value).trim()
+  const compactMatch = normalized.match(/^(\d{3,4})$/)
+
+  if (compactMatch) {
+    const digits = compactMatch[1].padStart(4, '0')
+    return Number(digits.slice(0, 2)) * 60 + Number(digits.slice(2, 4))
+  }
+
+  const timeMatch = normalized.match(/^(\d{1,2}):(\d{2})/)
+
+  if (timeMatch) {
+    return Number(timeMatch[1]) * 60 + Number(timeMatch[2])
+  }
+
+  return null
+}
+
+function serializePickupTime(value) {
+  const parsed = parseLocalDateTime(value)
+  return parsed ? parsed.toISOString() : null
+}
+
+function getPickupScheduleForDate(location, date) {
+  if (!location?.hours || typeof location.hours !== 'object' || !(date instanceof Date)) {
+    return null
+  }
+
+  const targetDay = normalizeDayKey(WEEKDAYS[date.getDay()])
+  const entry = Object.entries(location.hours).find(([day]) => normalizeDayKey(day) === targetDay)
+
+  if (!entry) {
+    return null
+  }
+
+  const [label, value] = entry
+  return {
+    label,
+    open: value?.open ?? '',
+    close: value?.close ?? '',
+  }
+}
+
+const selectedPickupSchedule = computed(() => {
+  const parsed = parseLocalDateTime(pickupTime.value)
+
+  if (!parsed || !selectedLocation.value) {
+    return null
+  }
+
+  return getPickupScheduleForDate(selectedLocation.value, parsed)
+})
+
+const pickupHoursHint = computed(() => {
+  if (!selectedLocation.value) {
+    return ''
+  }
+
+  if (pickupTime.value) {
+    const parsed = parseLocalDateTime(pickupTime.value)
+    const schedule = selectedPickupSchedule.value
+
+    if (!parsed) {
+      return 'Use the picker to choose a valid pickup date and time.'
+    }
+
+    const dayLabel = WEEKDAYS[parsed.getDay()]
+
+    if (!schedule?.open || !schedule?.close) {
+      return `${dayLabel} is closed for pickup at this store.`
+    }
+
+    return `${dayLabel} pickup hours: ${formatHoursRange(schedule.open, schedule.close)}`
+  }
+
+  if (selectedLocation.value.hoursToday?.open && selectedLocation.value.hoursToday?.close) {
+    return `Today's pickup hours: ${selectedLocation.value.hoursTodayLabel}`
+  }
+
+  return 'Choose a pickup date and time if you want the store to aim for a specific handoff window.'
+})
+
+const pickupTimeError = computed(() => {
+  if (!pickupTime.value || !selectedLocation.value) {
+    return ''
+  }
+
+  const parsed = parseLocalDateTime(pickupTime.value)
+
+  if (!parsed) {
+    return 'Choose a valid pickup date and time.'
+  }
+
+  const schedule = selectedPickupSchedule.value
+  const dayLabel = WEEKDAYS[parsed.getDay()]
+
+  if (!schedule?.open || !schedule?.close) {
+    return `${dayLabel} is closed for pickup at this store.`
+  }
+
+  const minutes = parsed.getHours() * 60 + parsed.getMinutes()
+  const openMinutes = timeToMinutes(schedule.open)
+  const closeMinutes = timeToMinutes(schedule.close)
+
+  if (openMinutes === null || closeMinutes === null) {
+    return ''
+  }
+
+  if (minutes < openMinutes || minutes > closeMinutes) {
+    return `${dayLabel} pickup time must be during store hours: ${formatHoursRange(schedule.open, schedule.close)}.`
+  }
+
+  return ''
+})
 
 function itemKey(item) {
   return `${item.id}-${item.size || 'default'}`
@@ -295,11 +448,25 @@ function showAllOrders() {
 async function loadOrders() {
   ordersLoading.value = true
   ordersError.value = ''
+  orderItemsLimited.value = false
 
   try {
     orders.value = await fetchSessionMemberOrders({ includeItems: true, limit: 50 })
   } catch (error) {
-    ordersError.value = formatFeatureError(error.message, 'Orders')
+    const message = String(error.message || '')
+
+    if (message.toLowerCase().includes('database query failed') || message.includes('500')) {
+      try {
+        orders.value = await fetchSessionMemberOrders({ includeItems: false, limit: 50 })
+        orderItemsLimited.value = true
+        return
+      } catch (fallbackError) {
+        ordersError.value = formatFeatureError(fallbackError.message, 'Orders')
+        return
+      }
+    }
+
+    ordersError.value = formatFeatureError(message, 'Orders')
   } finally {
     ordersLoading.value = false
   }
@@ -379,6 +546,11 @@ async function submitOrder() {
     return
   }
 
+  if (pickupTimeError.value) {
+    submitError.value = pickupTimeError.value
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -390,7 +562,7 @@ async function submitOrder() {
         size: item.size || null,
       })),
       payment_method: 'pay_in_store',
-      pickup_time: pickupTime.value || null,
+      pickup_time: serializePickupTime(pickupTime.value),
       special_instructions: specialInstructions.value.trim() || null,
     })
 
@@ -531,9 +703,8 @@ onMounted(() => {
                   placeholder="Extra hot, no whip, or pickup notes"
                 ></textarea>
               </label>
-              <p class="helper-text helper-text--compact">
-                Choose a pickup time if you want the store to aim for a specific handoff window.
-              </p>
+              <p class="helper-text helper-text--compact">{{ pickupHoursHint }}</p>
+              <p v-if="pickupTimeError" class="helper-text helper-text--error">{{ pickupTimeError }}</p>
               <div class="hours-row">
                 <span>Items</span>
                 <strong>{{ cartItemCount }}</strong>
@@ -729,6 +900,9 @@ onMounted(() => {
             <div class="filters-actions">
               <BaseButton size="sm" variant="ghost" @click="clearOrderFilters">Clear filters</BaseButton>
             </div>
+            <p v-if="orderItemsLimited" class="helper-text helper-text--compact">
+              Detailed line items are temporarily unavailable from the backend, so reorder and item-level search are limited right now.
+            </p>
           </BaseCard>
 
           <BaseCard padding="lg">
