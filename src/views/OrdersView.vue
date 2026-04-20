@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
@@ -129,6 +129,16 @@ const cartSubtotal = computed(() =>
 
 const estimatedTax = computed(() => Number((cartSubtotal.value * 0.07).toFixed(2)))
 const estimatedTotal = computed(() => Number((cartSubtotal.value + estimatedTax.value).toFixed(2)))
+const availableMenuItemIds = computed(() =>
+  new Set(
+    menuItems.value
+      .filter((item) => item.availableAtStore !== false)
+      .map((item) => item.id),
+  ),
+)
+const unavailableCartItems = computed(() =>
+  cart.value.filter((item) => !availableMenuItemIds.value.has(item.id)),
+)
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function parseLocalDateTime(value) {
@@ -188,6 +198,12 @@ function timeToMinutes(value) {
 function serializePickupTime(value) {
   const parsed = parseLocalDateTime(value)
   return parsed ? parsed.toISOString() : null
+}
+
+function clearPickupTime() {
+  pickupTime.value = ''
+  scheduleMismatch.value = false
+  submitError.value = ''
 }
 
 function getPickupScheduleForDate(location, date) {
@@ -329,6 +345,26 @@ function syncSelectedVariants(items) {
 function applyMenuItems(items) {
   menuItems.value = items
   syncSelectedVariants(items)
+  reconcileCartWithMenu(items)
+}
+
+function reconcileCartWithMenu(items) {
+  if (!cart.value.length) {
+    return
+  }
+
+  const validIds = new Set(
+    items
+      .filter((item) => item.availableAtStore !== false)
+      .map((item) => item.id),
+  )
+
+  const nextCart = cart.value.filter((item) => validIds.has(item.id))
+
+  if (nextCart.length !== cart.value.length) {
+    cart.value = nextCart
+    submitError.value = 'Some items were removed because they are not available at the selected pickup store.'
+  }
 }
 
 function selectVariant(groupId, variantId) {
@@ -503,28 +539,36 @@ async function loadBuilderData() {
   favoriteError.value = ''
 
   try {
-    const [locationResult, favorites] = await Promise.all([
-      fetchOrderableLocations(),
-      fetchSessionMemberFavorites({ limit: 50 }),
-    ])
+    const locationResult = await fetchOrderableLocations()
     locations.value = locationResult
 
     if (!selectedStoreId.value && locationResult.length) {
       selectedStoreId.value = locationResult[0].id
     }
 
+    if (!locationResult.length) {
+      menuItems.value = []
+      builderError.value = 'No pickup stores are currently available for ordering.'
+      return
+    }
+
     const menuResult = await fetchMenuForStore(selectedStoreId.value)
     applyMenuItems(menuResult)
+  } catch (error) {
+    builderError.value = error.message
+  } finally {
+    builderLoading.value = false
+  }
 
+  try {
+    const favorites = await fetchSessionMemberFavorites({ limit: 50 })
     explicitFavoriteIds.value = new Set(
       favorites
         .filter((favorite) => favorite.isExplicit)
         .map((favorite) => favorite.id),
     )
   } catch (error) {
-    builderError.value = error.message
-  } finally {
-    builderLoading.value = false
+    favoriteError.value = error.message
   }
 }
 
@@ -560,6 +604,11 @@ async function submitOrder() {
 
   if (!cart.value.length) {
     submitError.value = 'Add at least one menu item to your order.'
+    return
+  }
+
+  if (unavailableCartItems.value.length) {
+    submitError.value = 'Your cart still has items that are not available at this pickup store.'
     return
   }
 
@@ -609,6 +658,10 @@ onMounted(() => {
   loadOrders()
   loadPoints()
   loadBuilderData()
+})
+
+watch([pickupTime, selectedStoreId], () => {
+  scheduleMismatch.value = false
 })
 </script>
 
@@ -720,6 +773,11 @@ onMounted(() => {
                 <span class="input-label">Pickup time</span>
                 <input v-model="pickupTime" class="base-input" type="datetime-local" />
               </label>
+              <div class="filters-actions filters-actions--inline">
+                <BaseButton v-if="pickupTime" size="sm" variant="ghost" @click="clearPickupTime">
+                  No specific time
+                </BaseButton>
+              </div>
               <label class="input-group">
                 <span class="input-label">Special instructions</span>
                 <textarea
@@ -761,6 +819,12 @@ onMounted(() => {
                 <div>
                   <strong>{{ item.name }}</strong>
                   <p class="card-copy">{{ [item.size, item.category].filter(Boolean).join(' • ') }}</p>
+                  <p
+                    v-if="unavailableCartItems.some((cartItem) => cartItem.key === item.key)"
+                    class="helper-text helper-text--warning"
+                  >
+                    Not available at the selected store.
+                  </p>
                 </div>
 
                 <div class="cart-line__controls">
