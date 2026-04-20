@@ -470,6 +470,10 @@ textarea {
   color: rgba(46, 24, 8, 0.76);
 }
 
+.order-callout {
+  margin: 1rem 0 1.1rem;
+}
+
 .size-toggle-group {
   display: flex;
   flex-wrap: wrap;
@@ -916,6 +920,15 @@ textarea {
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-sm);
   background: rgba(228, 206, 175, 0.26);
+}
+
+.order-line__content {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.order-line__content small {
+  color: rgba(46, 24, 8, 0.76);
 }
 
 .modal-backdrop {

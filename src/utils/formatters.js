@@ -174,6 +174,41 @@ export function formatOrderStatus(value) {
   return labels[value] || formatTitleCase(value)
 }
 
+export function formatPaymentMethod(value) {
+  if (!value) {
+    return 'Payment details unavailable'
+  }
+
+  const labels = {
+    pay_in_store: 'Pay in store',
+  }
+
+  return labels[value] || formatTitleCase(value)
+}
+
+export function formatPaymentStatus(value) {
+  if (!value) {
+    return 'Status unavailable'
+  }
+
+  const labels = {
+    pending: 'Pay at pickup',
+    paid: 'Paid',
+    completed: 'Completed',
+  }
+
+  return labels[value] || formatTitleCase(value)
+}
+
+export function formatShortOrderId(value) {
+  if (!value) {
+    return 'Unavailable'
+  }
+
+  const stringValue = String(value)
+  return stringValue.length > 12 ? stringValue.slice(0, 8) : stringValue
+}
+
 export function formatCityStatePostal(city, state, postalCode) {
   const place = [city, state].filter(Boolean).join(', ')
 

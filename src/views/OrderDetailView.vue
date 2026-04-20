@@ -6,7 +6,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { fetchOrderDetail } from '../services/membersService'
-import { formatCurrency, formatDateTime, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatOrderStatus, formatPaymentMethod, formatPaymentStatus, formatPhone, formatShortOrderId, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
 const order = ref(null)
@@ -61,12 +61,21 @@ onMounted(loadOrder)
       <div v-else-if="order" class="detail-layout">
         <BaseCard class="detail-hero-card" padding="lg">
           <div class="card-topline">
-            <span class="badge">Order {{ order.id }}</span>
+            <span class="badge">Order {{ formatShortOrderId(order.id) }}</span>
             <span class="price-tag">{{ formatCurrency(order.total) }}</span>
           </div>
 
           <h1>{{ formatStoreLabel(order.locationName, order.city, order.state) }}</h1>
-          <p class="detail-lead">{{ formatDateTime(order.date) }}</p>
+          <p class="detail-lead">{{ order.pickupTime ? `Pickup around ${formatDateTime(order.pickupTime)}` : `Ordered ${formatDateTime(order.date)}` }}</p>
+
+          <div class="favorite-link order-callout">
+            <strong>
+              {{ order.readyByEstimate ? `Ready by ${formatDateTime(order.readyByEstimate)}` : formatOrderStatus(order.orderStatus) }}
+            </strong>
+            <span>
+              {{ order.storePhone ? `Store phone: ${formatPhone(order.storePhone)}` : 'Pay in store when you arrive.' }}
+            </span>
+          </div>
 
           <div class="detail-grid">
             <div class="detail-grid__item" v-if="order.pickupTime">
@@ -122,9 +131,9 @@ onMounted(loadOrder)
             <h2>Receipt breakdown</h2>
             <div v-if="order.items.length" class="orders-stack">
               <div v-for="item in order.items" :key="item.id" class="order-line">
-                <span>
-                  {{ item.quantity }}x {{ item.name }}
-                  <small v-if="item.size">({{ item.size }})</small>
+                <span class="order-line__content">
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ [item.size, `${item.quantity} item${item.quantity > 1 ? 's' : ''}`].filter(Boolean).join(' • ') }}</small>
                 </span>
                 <strong>{{ formatCurrency(item.lineTotal || item.price) }}</strong>
               </div>
@@ -138,16 +147,14 @@ onMounted(loadOrder)
             <div class="detail-stack">
               <p class="detail-lead">Total: {{ formatCurrency(order.total) }}</p>
               <p class="detail-lead">
-                Payment method:
-                {{ order.paymentSummary?.payment_method || order.paymentSummary?.method }}
+                Payment method: {{ formatPaymentMethod(order.paymentSummary?.payment_method || order.paymentSummary?.method || 'pay_in_store') }}
               </p>
               <p class="detail-lead">
-                Status:
-                {{ order.paymentSummary?.status }}
+                Payment status: {{ formatPaymentStatus(order.paymentSummary?.status) }}
               </p>
             </div>
             <RouterLink :to="{ name: 'menu' }">
-              <BaseButton variant="secondary">Order Again Inspiration</BaseButton>
+              <BaseButton variant="secondary">Browse Menu Again</BaseButton>
             </RouterLink>
           </BaseCard>
         </div>
