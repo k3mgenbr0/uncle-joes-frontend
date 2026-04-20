@@ -620,7 +620,7 @@ async function submitOrder() {
   isSubmitting.value = true
 
   try {
-    const createdOrder = await createPickupOrder({
+    const payload = {
       store_id: selectedStoreId.value,
       items: cart.value.map((item) => ({
         menu_item_id: item.id,
@@ -628,9 +628,16 @@ async function submitOrder() {
         size: item.size || null,
       })),
       payment_method: 'pay_in_store',
-      pickup_time: serializePickupTime(pickupTime.value),
       special_instructions: specialInstructions.value.trim() || null,
-    })
+    }
+
+    const serializedPickupTime = serializePickupTime(pickupTime.value)
+
+    if (serializedPickupTime) {
+      payload.pickup_time = serializedPickupTime
+    }
+
+    const createdOrder = await createPickupOrder(payload)
 
     submitSuccess.value = createdOrder
     cart.value = []
