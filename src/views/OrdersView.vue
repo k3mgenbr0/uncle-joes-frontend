@@ -8,7 +8,7 @@ import DashboardPoints from '../components/DashboardPoints.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
-import { createFavorite, deleteFavorite, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
+import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
 import { fetchLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
@@ -31,6 +31,7 @@ const submitSuccess = ref(null)
 const isSubmitting = ref(false)
 const favoriteError = ref('')
 const orderItemsLimited = ref(false)
+const scheduleMismatch = ref(false)
 const selectedStoreId = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
@@ -43,14 +44,15 @@ const orderSort = ref('newest')
 const visibleOrderCount = ref(6)
 const cart = ref([])
 const explicitFavoriteIds = ref(new Set())
+const dashboardPointsHistory = ref([])
 
 const pointsHistory = computed(() =>
-  orders.value.slice(0, 6).map((order) => ({
+  (dashboardPointsHistory.value.length ? dashboardPointsHistory.value : orders.value.slice(0, 6).map((order) => ({
     id: order.id,
     date: order.date,
     points: order.pointsEarned || Math.floor(order.total || 0),
     total: order.total,
-  })),
+  })))
 )
 
 const categories = computed(() => [
@@ -449,6 +451,7 @@ async function loadOrders() {
   ordersLoading.value = true
   ordersError.value = ''
   orderItemsLimited.value = false
+  dashboardPointsHistory.value = []
 
   try {
     orders.value = await fetchSessionMemberOrders({ includeItems: true, limit: 50 })
@@ -461,8 +464,16 @@ async function loadOrders() {
         orderItemsLimited.value = true
         return
       } catch (fallbackError) {
-        ordersError.value = formatFeatureError(fallbackError.message, 'Orders')
-        return
+        try {
+          const dashboard = await fetchMemberDashboard()
+          orders.value = dashboard.orders || []
+          dashboardPointsHistory.value = dashboard.pointsHistory || []
+          orderItemsLimited.value = true
+          return
+        } catch (dashboardError) {
+          ordersError.value = formatFeatureError(dashboardError.message, 'Orders')
+          return
+        }
       }
     }
 
@@ -535,6 +546,7 @@ async function refreshMenuForSelectedStore() {
 async function submitOrder() {
   submitError.value = ''
   submitSuccess.value = null
+  scheduleMismatch.value = false
 
   if (!selectedStoreId.value) {
     submitError.value = 'Choose a pickup store before placing your order.'
@@ -580,6 +592,9 @@ async function submitOrder() {
     }
   } catch (error) {
     submitError.value = error.message
+    scheduleMismatch.value =
+      String(error.message || '').toLowerCase().includes('closed on') ||
+      String(error.message || '').toLowerCase().includes('during store hours')
   } finally {
     isSubmitting.value = false
   }
@@ -705,6 +720,9 @@ onMounted(() => {
               </label>
               <p class="helper-text helper-text--compact">{{ pickupHoursHint }}</p>
               <p v-if="pickupTimeError" class="helper-text helper-text--error">{{ pickupTimeError }}</p>
+              <p v-if="scheduleMismatch" class="helper-text helper-text--warning">
+                The backend reported a different pickup schedule than the location feed. Try another time or store while that sync issue gets corrected.
+              </p>
               <div class="hours-row">
                 <span>Items</span>
                 <strong>{{ cartItemCount }}</strong>

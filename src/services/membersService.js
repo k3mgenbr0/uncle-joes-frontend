@@ -9,6 +9,7 @@ function normalizePoints(payload) {
       record?.points ??
         record?.balance ??
         record?.total_points ??
+        payload?.total_points ??
         record?.current_points ??
         0,
     ),

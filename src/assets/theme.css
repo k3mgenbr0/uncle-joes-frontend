@@ -823,6 +823,10 @@ textarea {
   color: #9e3219;
 }
 
+.helper-text--warning {
+  color: var(--color-saddle);
+}
+
 .base-textarea {
   min-height: 5.75rem;
   resize: vertical;
