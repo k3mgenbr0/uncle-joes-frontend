@@ -13,6 +13,7 @@ const locations = ref([])
 const searchTerm = ref('')
 const selectedState = ref('All')
 const selectedCity = ref('All')
+const selectedAvailability = ref('All')
 const isLoading = ref(true)
 const errorMessage = ref('')
 
@@ -30,6 +31,9 @@ const filteredLocations = computed(() => {
   const query = searchTerm.value.trim().toLowerCase()
 
   return locations.value.filter((location) =>
+    (selectedAvailability.value === 'All'
+      || (selectedAvailability.value === 'Open for Ordering' && isStoreOrderable(location))
+      || (selectedAvailability.value === 'Coming Soon' && !isStoreOrderable(location))) &&
     (selectedState.value === 'All' || location.state === selectedState.value) &&
     (selectedCity.value === 'All' || location.city === selectedCity.value) &&
     (!query ||
@@ -43,6 +47,7 @@ function resetFilters() {
   searchTerm.value = ''
   selectedState.value = 'All'
   selectedCity.value = 'All'
+  selectedAvailability.value = 'All'
 }
 
 watch(selectedState, () => {
@@ -95,6 +100,15 @@ onMounted(loadLocations)
             <span class="input-label">City</span>
             <select v-model="selectedCity" class="base-input base-select">
               <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+            </select>
+          </label>
+
+          <label class="input-group">
+            <span class="input-label">Availability</span>
+            <select v-model="selectedAvailability" class="base-input base-select">
+              <option value="All">All</option>
+              <option value="Open for Ordering">Open for Ordering</option>
+              <option value="Coming Soon">Coming Soon</option>
             </select>
           </label>
         </div>

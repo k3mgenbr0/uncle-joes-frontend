@@ -32,6 +32,7 @@ const isSubmitting = ref(false)
 const favoriteError = ref('')
 const orderItemsLimited = ref(false)
 const scheduleMismatch = ref(false)
+const scheduleFallbackUsed = ref(false)
 const selectedStoreId = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
@@ -203,6 +204,7 @@ function serializePickupTime(value) {
 function clearPickupTime() {
   pickupTime.value = ''
   scheduleMismatch.value = false
+  scheduleFallbackUsed.value = false
   submitError.value = ''
 }
 
@@ -591,6 +593,7 @@ async function submitOrder() {
   submitError.value = ''
   submitSuccess.value = null
   scheduleMismatch.value = false
+  scheduleFallbackUsed.value = false
 
   if (!selectedStoreId.value) {
     submitError.value = 'Choose a pickup store before placing your order.'
@@ -619,18 +622,46 @@ async function submitOrder() {
 
   isSubmitting.value = true
 
+  const basePayload = {
+    store_id: selectedStoreId.value,
+    items: cart.value.map((item) => ({
+      menu_item_id: item.id,
+      quantity: item.quantity,
+      size: item.size || null,
+    })),
+    payment_method: 'pay_in_store',
+    special_instructions: specialInstructions.value.trim() || null,
+  }
+
   try {
-    const createdOrder = await createPickupOrder({
-      store_id: selectedStoreId.value,
-      items: cart.value.map((item) => ({
-        menu_item_id: item.id,
-        quantity: item.quantity,
-        size: item.size || null,
-      })),
-      payment_method: 'pay_in_store',
-      pickup_time: serializePickupTime(pickupTime.value),
-      special_instructions: specialInstructions.value.trim() || null,
-    })
+    let createdOrder
+
+    try {
+      createdOrder = await createPickupOrder({
+        ...basePayload,
+        pickup_time: serializePickupTime(pickupTime.value),
+      })
+    } catch (error) {
+      const message = String(error.message || '').toLowerCase()
+      const shouldRetryWithoutPickupTime =
+        Boolean(pickupTime.value)
+        && (
+          message.includes('closed on')
+          || message.includes('during store hours')
+          || message.includes('pickup time')
+        )
+
+      if (!shouldRetryWithoutPickupTime) {
+        throw error
+      }
+
+      scheduleMismatch.value = true
+      scheduleFallbackUsed.value = true
+      createdOrder = await createPickupOrder({
+        ...basePayload,
+        pickup_time: null,
+      })
+    }
 
     submitSuccess.value = createdOrder
     cart.value = []
@@ -662,6 +693,7 @@ onMounted(() => {
 
 watch([pickupTime, selectedStoreId], () => {
   scheduleMismatch.value = false
+  scheduleFallbackUsed.value = false
 })
 </script>
 
@@ -791,6 +823,9 @@ watch([pickupTime, selectedStoreId], () => {
               <p v-if="pickupTimeError" class="helper-text helper-text--error">{{ pickupTimeError }}</p>
               <p v-if="scheduleMismatch" class="helper-text helper-text--warning">
                 The backend reported a different pickup schedule than the location feed. Try another time or store while that sync issue gets corrected.
+              </p>
+              <p v-if="scheduleFallbackUsed" class="helper-text helper-text--warning">
+                We submitted this order without a specific pickup time so it can still be prepared for pickup.
               </p>
               <div class="hours-row">
                 <span>Items</span>
