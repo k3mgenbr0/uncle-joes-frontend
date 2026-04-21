@@ -1,17 +1,22 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useAuthStore } from '../stores/auth'
 import MenuCard from '../components/MenuCard.vue'
 import MenuFilters from '../components/MenuFilters.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { fetchMenu, groupMenuItems } from '../services/menuService'
+import { createFavorite, deleteFavorite, fetchSessionMemberFavorites } from '../services/membersService'
 
+const authStore = useAuthStore()
 const menuItems = ref([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const searchTerm = ref('')
 const selectedCategory = ref('All')
+const explicitFavoriteIds = ref(new Set())
+const favoriteError = ref('')
 
 const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
 
@@ -28,6 +33,10 @@ const filteredItems = computed(() => {
   })
 })
 
+function isFavorite(item) {
+  return item.variants.some((variant) => explicitFavoriteIds.value.has(variant.id))
+}
+
 async function loadMenu() {
   isLoading.value = true
   errorMessage.value = ''
@@ -41,7 +50,49 @@ async function loadMenu() {
   }
 }
 
-onMounted(loadMenu)
+async function loadFavorites() {
+  if (!authStore.isAuthenticated) {
+    explicitFavoriteIds.value = new Set()
+    return
+  }
+
+  try {
+    const favorites = await fetchSessionMemberFavorites({ limit: 100 })
+    explicitFavoriteIds.value = new Set(
+      favorites
+        .filter((favorite) => favorite.isExplicit)
+        .map((favorite) => favorite.menuItemId),
+    )
+  } catch (error) {
+    favoriteError.value = error.message
+  }
+}
+
+async function toggleFavorite({ item, variant }) {
+  favoriteError.value = ''
+
+  try {
+    if (explicitFavoriteIds.value.has(variant.id)) {
+      await deleteFavorite(variant.id)
+      const next = new Set(explicitFavoriteIds.value)
+      next.delete(variant.id)
+      explicitFavoriteIds.value = next
+      return
+    }
+
+    await createFavorite(variant.id)
+    const next = new Set(explicitFavoriteIds.value)
+    next.add(variant.id)
+    explicitFavoriteIds.value = next
+  } catch (error) {
+    favoriteError.value = error.message
+  }
+}
+
+onMounted(async () => {
+  await loadMenu()
+  await loadFavorites()
+})
 </script>
 
 <template>
@@ -84,8 +135,13 @@ onMounted(loadMenu)
           v-for="item in filteredItems"
           :key="item.id || item.name"
           :item="item"
+          :is-favorite="isFavorite(item)"
+          :favorite-enabled="authStore.isAuthenticated"
+          @favorite-toggle="toggleFavorite"
         />
       </div>
+
+      <p v-if="favoriteError" class="helper-text helper-text--error">{{ favoriteError }}</p>
     </div>
   </section>
 </template>

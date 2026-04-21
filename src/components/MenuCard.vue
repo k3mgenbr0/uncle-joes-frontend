@@ -8,7 +8,17 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  isFavorite: {
+    type: Boolean,
+    default: false,
+  },
+  favoriteEnabled: {
+    type: Boolean,
+    default: false,
+  },
 })
+
+const emit = defineEmits(['favorite-toggle'])
 
 const selectedVariantId = ref(props.item.defaultVariant?.id ?? props.item.variants?.[0]?.id ?? '')
 
@@ -25,6 +35,17 @@ const selectedVariant = computed(() =>
     ?? props.item.variants[0]
     ?? null,
 )
+
+function toggleFavorite() {
+  if (!selectedVariant.value?.id) {
+    return
+  }
+
+  emit('favorite-toggle', {
+    item: props.item,
+    variant: selectedVariant.value,
+  })
+}
 </script>
 
 <template>
@@ -34,6 +55,19 @@ const selectedVariant = computed(() =>
       <span class="price-tag">
         {{ selectedVariant?.priceDisplay || formatCurrency(selectedVariant?.price) }}
       </span>
+    </div>
+    <div v-if="favoriteEnabled" class="card-topline">
+      <span class="helper-text helper-text--compact">
+        {{ selectedVariant?.size ? `${selectedVariant.size} size selected` : 'Save your usual for faster reordering' }}
+      </span>
+      <button
+        class="favorite-toggle"
+        type="button"
+        :aria-pressed="props.isFavorite"
+        @click="toggleFavorite"
+      >
+        {{ props.isFavorite ? '★ Saved' : '☆ Save' }}
+      </button>
     </div>
     <h3>{{ props.item.name }}</h3>
     <p v-if="props.item.description" class="card-copy">{{ props.item.description }}</p>

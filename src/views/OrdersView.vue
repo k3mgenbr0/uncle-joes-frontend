@@ -1059,21 +1059,24 @@ watch([pickupTime, selectedStoreId], () => {
               <h2>Add drinks and cafe favorites</h2>
             </div>
 
-            <div v-if="favoriteGroups.length" class="favorites-panel">
+            <div v-if="favoriteGroups.length" class="favorites-panel favorites-panel--compact">
               <div class="card-topline">
                 <span class="input-label">Favorites</span>
                 <span class="helper-text helper-text--compact">Quick reordering for your usuals</span>
               </div>
-              <div class="favorites-list">
-                <div v-for="item in favoriteGroups" :key="item.id" class="favorite-link">
-                  <strong>{{ item.name }}</strong>
-                  <span>{{ [item.category, item.displaySize, item.displayPriceLabel].filter(Boolean).join(' • ') }}</span>
+              <div class="favorites-list favorites-list--compact">
+                <div v-for="item in favoriteGroups" :key="item.id" class="favorite-link favorite-link--compact">
+                  <div>
+                    <strong>{{ item.name }}</strong>
+                    <span>{{ [item.category, item.displaySize, item.displayPriceLabel].filter(Boolean).join(' • ') }}</span>
+                  </div>
                   <BaseButton
                     size="sm"
+                    variant="secondary"
                     :disabled="item.availableAtStore === false"
                     @click="addFavoriteToCart(item)"
                   >
-                    {{ item.availableAtStore === false ? 'Unavailable at Store' : 'Add Favorite' }}
+                    {{ item.availableAtStore === false ? 'Unavailable' : 'Add' }}
                   </BaseButton>
                 </div>
               </div>
