@@ -26,9 +26,13 @@ defineProps({
     type: String,
     default: 'Your Order History',
   },
+  showReorder: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['retry'])
+const emit = defineEmits(['retry', 'reorder'])
 </script>
 
 <template>
@@ -95,6 +99,14 @@ const emit = defineEmits(['retry'])
         >
           View order details
         </RouterLink>
+        <button
+          v-if="showReorder && order.items.length"
+          type="button"
+          class="card-link"
+          @click="emit('reorder', order)"
+        >
+          Reorder this visit
+        </button>
       </article>
     </div>
   </BaseCard>

@@ -319,6 +319,28 @@ function clearPickupTime() {
   submitError.value = ''
 }
 
+function toDateTimeLocalValue(value) {
+  const date = value instanceof Date ? value : new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function setMinutesOnDate(date, totalMinutes) {
+  const next = new Date(date)
+  next.setHours(Math.floor(totalMinutes / 60), totalMinutes % 60, 0, 0)
+  return next
+}
+
 function getPickupScheduleForDate(location, date) {
   if (!location?.hours || typeof location.hours !== 'object' || !(date instanceof Date)) {
     return null
@@ -337,6 +359,82 @@ function getPickupScheduleForDate(location, date) {
     open: value?.open ?? '',
     close: value?.close ?? '',
   }
+}
+
+function findNextScheduledPickup(baseDate, offsetMinutes) {
+  const store = selectedLocation.value
+  const base = new Date(baseDate)
+
+  if (!store) {
+    return null
+  }
+
+  for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
+    const candidateDay = new Date(base)
+    candidateDay.setDate(base.getDate() + dayOffset)
+    const schedule = getPickupScheduleForDate(store, candidateDay)
+
+    if (!schedule?.open || !schedule?.close) {
+      continue
+    }
+
+    const openMinutes = timeToMinutes(schedule.open)
+    const closeMinutes = timeToMinutes(schedule.close)
+
+    if (openMinutes === null || closeMinutes === null) {
+      continue
+    }
+
+    let candidate = new Date(candidateDay)
+
+    if (dayOffset === 0) {
+      candidate = new Date(base.getTime() + offsetMinutes * 60000)
+      const candidateMinutes = candidate.getHours() * 60 + candidate.getMinutes()
+
+      if (candidateMinutes < openMinutes) {
+        candidate = setMinutesOnDate(candidateDay, openMinutes + offsetMinutes)
+      }
+
+      if (candidate.getDate() !== candidateDay.getDate() || (candidate.getHours() * 60 + candidate.getMinutes()) > closeMinutes) {
+        continue
+      }
+
+      return candidate
+    }
+
+    candidate = setMinutesOnDate(candidateDay, openMinutes + offsetMinutes)
+
+    if ((candidate.getHours() * 60 + candidate.getMinutes()) <= closeMinutes) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
+function applyPickupPreset(preset) {
+  submitError.value = ''
+  scheduleMismatch.value = false
+
+  if (preset === 'asap') {
+    clearPickupTime()
+    return
+  }
+
+  const offsetMinutes = Number(preset)
+
+  if (!selectedLocation.value || Number.isNaN(offsetMinutes)) {
+    return
+  }
+
+  const nextPickup = findNextScheduledPickup(new Date(), offsetMinutes)
+
+  if (!nextPickup) {
+    submitError.value = 'We could not find a good scheduled pickup slot for this store right now. Try ASAP or pick a time manually.'
+    return
+  }
+
+  pickupTime.value = toDateTimeLocalValue(nextPickup)
 }
 
 const selectedPickupSchedule = computed(() => {
@@ -604,6 +702,14 @@ function addToCart(item) {
 }
 
 async function addOrderToCart(order) {
+  submitError.value = ''
+  submitSuccess.value = null
+
+  if (order.storeId && order.storeId !== selectedStoreId.value) {
+    selectedStoreId.value = order.storeId
+    await refreshMenuForSelectedStore()
+  }
+
   order.items.forEach((item) => {
     addToCart({
       id: item.menuItemId,
@@ -613,11 +719,6 @@ async function addOrderToCart(order) {
       price: item.unitPrice || item.price,
     })
   })
-
-  if (order.storeId && order.storeId !== selectedStoreId.value) {
-    selectedStoreId.value = order.storeId
-    await refreshMenuForSelectedStore()
-  }
 
   activePanel.value = 'builder'
 }
@@ -986,10 +1087,28 @@ watch([pickupTime, selectedStoreId], () => {
                 <span class="input-label">Pickup time</span>
                 <input v-model="pickupTime" class="base-input" type="datetime-local" />
               </label>
-              <div class="filters-actions filters-actions--inline">
-                <BaseButton v-if="pickupTime" size="sm" variant="ghost" @click="clearPickupTime">
+              <div class="pickup-shortcuts">
+                <button
+                  type="button"
+                  :class="['pickup-shortcuts__button', { 'pickup-shortcuts__button--active': !pickupTime }]"
+                  @click="applyPickupPreset('asap')"
+                >
                   ASAP
-                </BaseButton>
+                </button>
+                <button
+                  type="button"
+                  class="pickup-shortcuts__button"
+                  @click="applyPickupPreset(15)"
+                >
+                  In 15 min
+                </button>
+                <button
+                  type="button"
+                  class="pickup-shortcuts__button"
+                  @click="applyPickupPreset(30)"
+                >
+                  In 30 min
+                </button>
               </div>
               <label class="input-group">
                 <span class="input-label">Special instructions</span>
@@ -1271,7 +1390,9 @@ watch([pickupTime, selectedStoreId], () => {
           :error-message="ordersError"
           eyebrow="Previous Orders"
           title="Your previous pickup orders"
+          show-reorder
           @retry="loadOrders"
+          @reorder="addOrderToCart"
         />
 
         <div v-if="!ordersLoading && !ordersError && filteredOrders.length" class="hero-actions">
