@@ -56,8 +56,8 @@ function toggleFavorite() {
         {{ selectedVariant?.priceDisplay || formatCurrency(selectedVariant?.price) }}
       </span>
     </div>
-    <div v-if="favoriteEnabled" class="card-topline">
-      <span class="helper-text helper-text--compact">
+    <div v-if="favoriteEnabled" class="card-topline card-topline--meta">
+      <span class="card-context">
         {{ selectedVariant?.size ? `${selectedVariant.size} size selected` : 'Save your usual for faster reordering' }}
       </span>
       <button

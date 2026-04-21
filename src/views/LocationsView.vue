@@ -91,12 +91,15 @@ onMounted(loadLocations)
 </script>
 
 <template>
-  <section class="section">
+  <section class="section section--catalog">
     <div class="container">
-      <div class="section-heading">
-        <span class="eyebrow">Nearby Stores</span>
-        <h1>Locations</h1>
-        <p>Search by city or state to find an Uncle Joe's Coffee shop near you.</p>
+      <div class="section-heading section-heading--wide catalog-heading">
+        <div>
+          <span class="eyebrow">Nearby Stores</span>
+          <h1>Locations</h1>
+          <p>Search by city or state to find an Uncle Joe's Coffee shop near you.</p>
+        </div>
+        <p class="catalog-heading__note">Filter by region, amenity, and ordering status to find the right stop for your next coffee run.</p>
       </div>
 
       <BaseCard class="filters-card" padding="lg">

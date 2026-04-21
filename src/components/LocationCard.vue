@@ -19,18 +19,17 @@ const props = defineProps({
   <BaseCard class="location-card">
     <div class="card-topline">
       <span v-if="props.location.state" class="badge">{{ props.location.state }}</span>
-      <strong>{{ props.location.city }}</strong>
+      <span
+        v-if="!isStoreOrderable(props.location) && props.location.availabilityMessage"
+        class="location-card__status"
+      >
+        {{ props.location.availabilityMessage }}
+      </span>
+      <strong v-else>{{ props.location.city }}</strong>
     </div>
 
-    <h3>{{ formatStoreLabel(props.location.storeName || props.location.name, props.location.city, props.location.state) }}</h3>
+    <h3>{{ formatStoreLabel(props.location) }}</h3>
     <p v-if="props.location.address" class="card-copy">{{ props.location.address }}</p>
-
-    <p
-      v-if="!isStoreOrderable(props.location) && props.location.availabilityMessage"
-      class="helper-text helper-text--warning"
-    >
-      {{ props.location.availabilityMessage }}
-    </p>
 
     <dl v-if="props.location.hoursTodayLabel || props.location.hoursLabel || props.location.phone" class="info-grid info-grid--single">
       <div v-if="props.location.hoursTodayLabel || props.location.hoursLabel">

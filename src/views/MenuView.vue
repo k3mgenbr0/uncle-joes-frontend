@@ -96,12 +96,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="section">
+  <section class="section section--catalog">
     <div class="container">
-      <div class="section-heading">
-        <span class="eyebrow">Freshly Brewed</span>
-        <h1>Menu</h1>
-        <p>Browse drinks and cafe favorites with quick filters to find your next order.</p>
+      <div class="section-heading section-heading--wide catalog-heading">
+        <div>
+          <span class="eyebrow">Freshly Brewed</span>
+          <h1>Menu</h1>
+          <p>Browse drinks and cafe favorites with quick filters to find your next order.</p>
+        </div>
+        <p class="catalog-heading__note">Save your usuals from the menu, then reorder them faster when you're ready to pick up.</p>
       </div>
 
       <MenuFilters
