@@ -3,8 +3,7 @@ import { computed } from 'vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseCard from '../components/BaseCard.vue'
 import { useAuthStore } from '../stores/auth'
-import logoHorizontal from '../assets/branding/logo-horizontal.png'
-import logoStacked from '../assets/branding/logo-stacked.png'
+import logoIcon from '../assets/branding/logo-icon.png'
 
 const authStore = useAuthStore()
 const memberPrimaryCta = computed(() => (authStore.isAuthenticated ? '/orders' : '/login'))
@@ -28,11 +27,22 @@ const benefits = [
 
 <template>
   <div>
-    <section class="hero-section">
+    <section class="hero-section hero-section--branded">
+      <div class="hero-atmosphere" aria-hidden="true">
+        <span class="hero-atmosphere__orb hero-atmosphere__orb--caramel"></span>
+        <span class="hero-atmosphere__orb hero-atmosphere__orb--oak"></span>
+        <span class="hero-atmosphere__line hero-atmosphere__line--left"></span>
+        <span class="hero-atmosphere__line hero-atmosphere__line--right"></span>
+      </div>
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">Warm coffee. Better mornings.</span>
-          <img :src="logoHorizontal" alt="Uncle Joe's Coffee" class="hero-brand-image" />
+          <div class="hero-brand-lockup">
+            <img :src="logoIcon" alt="Uncle Joe's Coffee" class="hero-brand-lockup__icon" />
+            <div>
+              <span class="eyebrow">Warm coffee. Better mornings.</span>
+              <p class="hero-brand-lockup__text">Uncle Joe's Coffee Company</p>
+            </div>
+          </div>
           <h1>Your neighborhood coffee stop, ready when you are.</h1>
           <p>
             Sip your way through handcrafted favorites, discover neighborhood locations,
@@ -52,19 +62,34 @@ const benefits = [
           </div>
         </div>
 
-        <BaseCard class="hero-feature-card" padding="lg">
-          <img :src="logoStacked" alt="Uncle Joe's Coffee badge" class="hero-feature-logo" />
-          <p class="feature-overline">Coffee Club</p>
-          <h2>Rewards that feel like your regular order knows your name.</h2>
-          <p>
-            Sign in to view your points balance, revisit your recent orders, and stay connected to the Uncle Joe's experience.
-          </p>
-          <ul class="feature-list">
-            <li>Member dashboard with points and orders</li>
-            <li>Fast access to nearby stores</li>
-            <li>Fresh menu browsing on any device</li>
-          </ul>
-        </BaseCard>
+        <div class="hero-showcase">
+          <BaseCard class="hero-feature-card" padding="lg">
+            <div class="hero-feature-card__badge">
+              <img :src="logoIcon" alt="" class="hero-feature-card__icon" />
+              <span>Coffee Club</span>
+            </div>
+            <h2>Rewards that feel like your regular order knows your name.</h2>
+            <p>
+              Sign in to view your points balance, revisit your recent orders, and stay connected to the Uncle Joe's experience.
+            </p>
+            <ul class="feature-list">
+              <li>Member dashboard with points and orders</li>
+              <li>Fast access to nearby stores</li>
+              <li>Fresh menu browsing on any device</li>
+            </ul>
+          </BaseCard>
+
+          <div class="hero-floating-notes" aria-hidden="true">
+            <div class="hero-note">
+              <span class="hero-note__label">Neighborhood first</span>
+              <strong>Fresh pickup, easy rewards</strong>
+            </div>
+            <div class="hero-note hero-note--warm">
+              <span class="hero-note__label">Daily ritual</span>
+              <strong>Good coffee. Good people.</strong>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

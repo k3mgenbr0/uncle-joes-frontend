@@ -1,13 +1,18 @@
 <script setup>
-import logoHorizontal from '../assets/branding/logo-horizontal.png'
+import logoIcon from '../assets/branding/logo-icon.png'
 </script>
 
 <template>
   <footer class="site-footer">
     <div class="container footer-row">
       <div class="footer-brand">
-        <img :src="logoHorizontal" alt="Uncle Joe's Coffee" class="footer-brand__image" />
-        <p>Neighborhood coffee, easy rewards, and a warm welcome every time.</p>
+        <div class="footer-brand__heading">
+          <img :src="logoIcon" alt="Uncle Joe's Coffee" class="footer-brand__image" />
+          <div>
+            <strong>Uncle Joe's Coffee</strong>
+            <p>Neighborhood coffee, easy rewards, and a warm welcome every time.</p>
+          </div>
+        </div>
       </div>
 
       <div class="footer-links">

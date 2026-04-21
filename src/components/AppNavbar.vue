@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from './BaseButton.vue'
 import { useAuthStore } from '../stores/auth'
-import logoHorizontal from '../assets/branding/logo-horizontal.png'
+import logoIcon from '../assets/branding/logo-icon.png'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -40,7 +40,11 @@ async function handleLogout() {
   <header class="site-header">
     <div class="container header-row">
       <RouterLink to="/" class="brand-mark" @click="closeMenu">
-        <img :src="logoHorizontal" alt="Uncle Joe's Coffee" class="brand-mark__image" />
+        <img :src="logoIcon" alt="Uncle Joe's Coffee" class="brand-mark__image" />
+        <div class="brand-mark__copy">
+          <span class="brand-mark__title">Uncle Joe's</span>
+          <span class="brand-mark__subtitle">Coffee Company</span>
+        </div>
       </RouterLink>
 
       <button
