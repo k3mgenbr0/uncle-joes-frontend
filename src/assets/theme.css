@@ -721,6 +721,28 @@ textarea {
   background: rgba(228, 206, 175, 0.22);
 }
 
+.nearby-store-section,
+.favorites-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nearby-store-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.nearby-store-chip {
+  border: 1px solid rgba(120, 56, 12, 0.16);
+  border-radius: var(--radius-pill);
+  padding: 0.55rem 0.9rem;
+  background: rgba(255, 253, 249, 0.86);
+  color: var(--color-saddle);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .order-menu-grid {
   display: grid;
   gap: 1rem;

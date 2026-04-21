@@ -72,6 +72,137 @@ export function isStoreOrderable(store) {
   return store?.orderingAvailable === true
 }
 
+export function formatStoreOptionLabel(location, locations = []) {
+  if (!location) {
+    return 'Store unavailable'
+  }
+
+  const city = location.city || 'Store'
+  const streetSource = location.address || location.fullAddress || location.mapAddress || ''
+  const street = String(streetSource)
+    .split(',')[0]
+    .replace(/^\d+\s*/, '')
+    .replace(/\s+(Suite|Ste|Unit)\b.*$/i, '')
+    .trim()
+
+  const baseLabel = street ? `${city} - ${street}` : `${city}${location.state ? `, ${location.state}` : ''}`
+  const duplicates = locations.filter((entry) =>
+    entry.id !== location.id
+    && entry.city === location.city
+    && (entry.address || '').replace(/^\d+\s*/, '').trim() === (location.address || '').replace(/^\d+\s*/, '').trim(),
+  )
+
+  return duplicates.length && location.state ? `${baseLabel}, ${location.state}` : baseLabel
+}
+
+function parseNearByKeywords(value) {
+  return String(value || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/g)
+    .filter((token) => token.length > 2)
+}
+
+function distanceBetween(first, second) {
+  if (
+    !first
+    || !second
+    || first.latitude === null
+    || first.latitude === undefined
+    || first.longitude === null
+    || first.longitude === undefined
+    || second.latitude === null
+    || second.latitude === undefined
+    || second.longitude === null
+    || second.longitude === undefined
+  ) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  const toRadians = (value) => (value * Math.PI) / 180
+  const earthRadiusMiles = 3958.8
+  const deltaLat = toRadians(Number(second.latitude) - Number(first.latitude))
+  const deltaLon = toRadians(Number(second.longitude) - Number(first.longitude))
+  const startLat = toRadians(Number(first.latitude))
+  const endLat = toRadians(Number(second.latitude))
+  const a =
+    Math.sin(deltaLat / 2) ** 2
+    + Math.cos(startLat) * Math.cos(endLat) * Math.sin(deltaLon / 2) ** 2
+
+  return 2 * earthRadiusMiles * Math.asin(Math.sqrt(a))
+}
+
+export function sortNearbyLocations(locations = [], selectedLocation = null, userCoordinates = null) {
+  if (!selectedLocation) {
+    return []
+  }
+
+  const selectedKeywords = new Set([
+    ...parseNearByKeywords(selectedLocation.nearBy),
+    ...parseNearByKeywords(selectedLocation.city),
+    ...parseNearByKeywords(selectedLocation.state),
+  ])
+
+  return [...locations]
+    .filter((location) => location.id !== selectedLocation.id)
+    .map((location) => {
+      const locationKeywords = parseNearByKeywords(location.nearBy)
+      const keywordScore = locationKeywords.reduce(
+        (total, keyword) => total + (selectedKeywords.has(keyword) ? 1 : 0),
+        0,
+      )
+
+      const distanceFromSelected = distanceBetween(selectedLocation, location)
+      const distanceFromUser = userCoordinates
+        ? distanceBetween(
+            {
+              latitude: userCoordinates.latitude,
+              longitude: userCoordinates.longitude,
+            },
+            location,
+          )
+        : Number.POSITIVE_INFINITY
+
+      return {
+        ...location,
+        nearbyKeywordScore: keywordScore,
+        nearbyDistance: Number.isFinite(distanceFromSelected) ? distanceFromSelected : distanceFromUser,
+      }
+    })
+    .sort((left, right) => {
+      if (left.nearbyKeywordScore !== right.nearbyKeywordScore) {
+        return right.nearbyKeywordScore - left.nearbyKeywordScore
+      }
+
+      return left.nearbyDistance - right.nearbyDistance
+    })
+}
+
+export function findClosestLocation(locations = [], userCoordinates = null) {
+  if (!userCoordinates) {
+    return null
+  }
+
+  const [closest] = [...locations]
+    .filter((location) => location.latitude !== null && location.longitude !== null)
+    .sort((left, right) =>
+      distanceBetween(
+        {
+          latitude: userCoordinates.latitude,
+          longitude: userCoordinates.longitude,
+        },
+        left,
+      ) - distanceBetween(
+        {
+          latitude: userCoordinates.latitude,
+          longitude: userCoordinates.longitude,
+        },
+        right,
+      ),
+    )
+
+  return closest ?? null
+}
+
 export async function fetchLocations(options = {}) {
   try {
     const params = new URLSearchParams()

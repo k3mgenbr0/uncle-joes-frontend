@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
 import OrderHistory from '../components/OrderHistory.vue'
@@ -10,11 +11,12 @@ import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
-import { fetchOrderableLocations, isStoreOrderable } from '../services/locationsService'
+import { fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
 import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const activePanel = ref('builder')
 const orders = ref([])
 const points = ref(0)
@@ -33,6 +35,7 @@ const favoriteError = ref('')
 const orderItemsLimited = ref(false)
 const scheduleMismatch = ref(false)
 const selectedStoreId = ref('')
+const storeSearchTerm = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
 const selectedVariantByGroup = ref({})
@@ -45,6 +48,7 @@ const visibleOrderCount = ref(6)
 const cart = ref([])
 const explicitFavoriteIds = ref(new Set())
 const dashboardPointsHistory = ref([])
+const userCoordinates = ref(null)
 
 const pointsHistory = computed(() =>
   (dashboardPointsHistory.value.length ? dashboardPointsHistory.value : orders.value.slice(0, 6).map((order) => ({
@@ -61,6 +65,28 @@ const categories = computed(() => [
 ])
 
 const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
+const favoriteGroups = computed(() =>
+  groupedMenuItems.value.filter((item) => isFavorite(item)),
+)
+const filteredStoreOptions = computed(() => {
+  const query = storeSearchTerm.value.trim().toLowerCase()
+
+  if (!query) {
+    return locations.value
+  }
+
+  return locations.value.filter((location) =>
+    [
+      formatStoreOptionLabel(location, locations.value),
+      location.city,
+      location.state,
+      location.address,
+      location.nearBy,
+    ]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(query)),
+  )
+})
 
 const filteredMenuItems = computed(() =>
   groupedMenuItems.value.filter((item) => {
@@ -117,6 +143,9 @@ const hasMoreOrders = computed(() => filteredOrders.value.length > visibleOrderC
 
 const selectedLocation = computed(() =>
   locations.value.find((location) => location.id === selectedStoreId.value) ?? null,
+)
+const nearbyStores = computed(() =>
+  sortNearbyLocations(locations.value, selectedLocation.value, userCoordinates.value).slice(0, 3),
 )
 
 const cartItemCount = computed(() =>
@@ -198,6 +227,27 @@ function timeToMinutes(value) {
 function serializePickupTime(value) {
   const parsed = parseLocalDateTime(value)
   return parsed ? parsed.toISOString() : null
+}
+
+function resolveUserCoordinates() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.resolve(null)
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      }),
+      () => resolve(null),
+      {
+        enableHighAccuracy: false,
+        timeout: 3000,
+        maximumAge: 300000,
+      },
+    )
+  })
 }
 
 function clearPickupTime() {
@@ -346,6 +396,35 @@ function applyMenuItems(items) {
   menuItems.value = items
   syncSelectedVariants(items)
   reconcileCartWithMenu(items)
+}
+
+async function chooseDefaultStore(locationResult) {
+  if (!locationResult.length) {
+    selectedStoreId.value = ''
+    return
+  }
+
+  if (selectedStoreId.value && locationResult.some((location) => location.id === selectedStoreId.value)) {
+    return
+  }
+
+  const preferredStoreId =
+    authStore.currentUser?.preferredStoreId
+    || authStore.currentUser?.preferredStore?.location_id
+    || authStore.currentUser?.preferredStore?.id
+
+  if (preferredStoreId) {
+    const preferredStore = locationResult.find((location) => location.id === preferredStoreId)
+
+    if (preferredStore) {
+      selectedStoreId.value = preferredStore.id
+      return
+    }
+  }
+
+  userCoordinates.value = await resolveUserCoordinates()
+  const closestStore = findClosestLocation(locationResult, userCoordinates.value)
+  selectedStoreId.value = closestStore?.id ?? locationResult[0].id
 }
 
 function reconcileCartWithMenu(items) {
@@ -542,15 +621,13 @@ async function loadBuilderData() {
     const locationResult = await fetchOrderableLocations()
     locations.value = locationResult
 
-    if (!selectedStoreId.value && locationResult.length) {
-      selectedStoreId.value = locationResult[0].id
-    }
-
     if (!locationResult.length) {
       menuItems.value = []
       builderError.value = 'No pickup stores are currently available for ordering.'
       return
     }
+
+    await chooseDefaultStore(locationResult)
 
     const menuResult = await fetchMenuForStore(selectedStoreId.value)
     applyMenuItems(menuResult)
@@ -750,20 +827,29 @@ watch([pickupTime, selectedStoreId], () => {
           <div v-else class="order-builder-store">
             <label class="input-group">
               <span class="input-label">Pickup store</span>
+              <input
+                v-model="storeSearchTerm"
+                class="base-input"
+                type="text"
+                placeholder="Search by city, street, or keyword"
+              />
               <select v-model="selectedStoreId" class="base-input base-select" @change="refreshMenuForSelectedStore">
                 <option disabled value="">Choose a store</option>
                 <option
-                  v-for="location in locations"
+                  v-for="location in filteredStoreOptions"
                   :key="location.id"
                   :value="location.id"
                 >
-                  {{ formatStoreLabel(location.storeName, location.city, location.state) }}
+                  {{ formatStoreOptionLabel(location, locations) }}
                 </option>
               </select>
+              <p v-if="storeSearchTerm && !filteredStoreOptions.length" class="helper-text helper-text--compact">
+                No stores match that search yet.
+              </p>
             </label>
 
             <div v-if="selectedLocation" class="order-store-summary">
-              <strong>{{ formatStoreLabel(selectedLocation.storeName, selectedLocation.city, selectedLocation.state) }}</strong>
+              <strong>{{ formatStoreOptionLabel(selectedLocation, locations) }}</strong>
               <span v-if="selectedLocation.address">{{ selectedLocation.address }}</span>
               <span v-if="selectedLocation.phone">Phone: {{ formatPhone(selectedLocation.phone) }}</span>
               <span v-if="selectedLocation.hoursTodayLabel">Today: {{ selectedLocation.hoursTodayLabel }}</span>
@@ -773,6 +859,21 @@ watch([pickupTime, selectedStoreId], () => {
               >
                 {{ selectedLocation.availabilityMessage }}
               </span>
+            </div>
+
+            <div v-if="nearbyStores.length" class="nearby-store-section">
+              <span class="input-label">Nearby Stores</span>
+              <div class="nearby-store-list">
+                <button
+                  v-for="location in nearbyStores"
+                  :key="location.id"
+                  type="button"
+                  class="nearby-store-chip"
+                  @click="selectedStoreId = location.id; refreshMenuForSelectedStore()"
+                >
+                  {{ formatStoreOptionLabel(location, locations) }}
+                </button>
+              </div>
             </div>
 
             <div class="order-summary">
@@ -866,6 +967,26 @@ watch([pickupTime, selectedStoreId], () => {
               <h2>Add drinks and cafe favorites</h2>
             </div>
 
+            <div v-if="favoriteGroups.length" class="favorites-panel">
+              <div class="card-topline">
+                <span class="input-label">Favorites</span>
+                <span class="helper-text helper-text--compact">Quick reordering for your usuals</span>
+              </div>
+              <div class="favorites-list">
+                <div v-for="item in favoriteGroups" :key="item.id" class="favorite-link">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ [getSelectedVariant(item)?.size, getSelectedVariant(item)?.priceDisplay || formatCurrency(getSelectedVariant(item)?.price)].filter(Boolean).join(' • ') }}</span>
+                  <BaseButton
+                    size="sm"
+                    :disabled="getSelectedVariant(item)?.availableAtStore === false"
+                    @click="addToCart(buildCartItem(item))"
+                  >
+                    Add Favorite
+                  </BaseButton>
+                </div>
+              </div>
+            </div>
+
             <div class="filters-grid filters-grid--two">
               <label class="input-group">
                 <span class="input-label">Search menu</span>
@@ -913,7 +1034,7 @@ watch([pickupTime, selectedStoreId], () => {
                     :aria-pressed="isFavorite(item)"
                     @click="toggleFavorite(item)"
                   >
-                    {{ isFavorite(item) ? 'Remove Favorite' : 'Save Favorite' }}
+                    {{ isFavorite(item) ? '★ Saved' : '☆ Save' }}
                   </button>
                 </div>
                 <p class="card-copy">
