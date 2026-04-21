@@ -4,9 +4,11 @@ import BaseCard from '../components/BaseCard.vue'
 import DashboardPoints from '../components/DashboardPoints.vue'
 import OrderHistory from '../components/OrderHistory.vue'
 import ErrorState from '../components/ErrorState.vue'
+import LoadingState from '../components/LoadingState.vue'
+import EmptyState from '../components/EmptyState.vue'
 import { useAuthStore } from '../stores/auth'
-import { fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders } from '../services/membersService'
-import { formatMonthDay, formatPhone, formatDate, formatFeatureError, formatTitleCase } from '../utils/formatters'
+import { fetchMemberDashboard, fetchMemberRewards, fetchPointsHistory, fetchRewardsProgram, fetchRewardsRedemptions, fetchSessionMemberFavorites, fetchSessionMemberOrders } from '../services/membersService'
+import { formatMonthDay, formatPhone, formatDate, formatFeatureError, formatTitleCase, formatCurrency } from '../utils/formatters'
 
 const authStore = useAuthStore()
 
@@ -16,13 +18,48 @@ const favorites = ref([])
 const pointsLoading = ref(true)
 const ordersLoading = ref(true)
 const favoritesLoading = ref(true)
+const rewardsLoading = ref(true)
+const activityLoading = ref(true)
+const redemptionsLoading = ref(true)
 const pointsError = ref('')
 const ordersError = ref('')
 const favoritesError = ref('')
+const rewardsError = ref('')
+const activityError = ref('')
+const redemptionsError = ref('')
 const dashboardMember = ref(null)
+const rewardsSummary = ref(null)
+const rewardsProgram = ref(null)
+const pointsHistory = ref([])
+const redemptions = ref([])
+const redemptionTrackingEnabled = ref(false)
 
 const memberRecord = computed(() => dashboardMember.value ?? authStore.currentUser ?? null)
 const preferredStore = computed(() => memberRecord.value?.preferredStore ?? null)
+const rewardTierLabel = computed(() => formatTitleCase(rewardsSummary.value?.rewardsTier || memberRecord.value?.tier || ''))
+const rewardProgressPercent = computed(() => {
+  const progress = Number(rewardsSummary.value?.currentRewardProgress ?? 0)
+  const threshold = Number(rewardsSummary.value?.nextRewardThreshold ?? 0)
+
+  if (!threshold || threshold <= 0) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, (progress / threshold) * 100))
+})
+const recentPointsBars = computed(() => {
+  const entries = pointsHistory.value.slice(-6)
+  const maxPoints = Math.max(...entries.map((entry) => entry.pointsEarned || 0), 1)
+
+  return entries.map((entry) => ({
+    ...entry,
+    height: `${Math.max(18, ((entry.pointsEarned || 0) / maxPoints) * 100)}%`,
+  }))
+})
+const activeBonusPrograms = computed(() => [
+  ...(rewardsSummary.value?.bonusPrograms || []),
+  ...(rewardsProgram.value?.bonusPrograms || []),
+])
 
 async function loadSummary() {
   pointsLoading.value = true
@@ -35,9 +72,10 @@ async function loadSummary() {
   try {
     const dashboardResult = await fetchMemberDashboard()
     dashboardMember.value = dashboardResult.member
-    points.value = dashboardResult.points
+    points.value = dashboardResult.rewards?.currentPoints || dashboardResult.points
     orders.value = dashboardResult.orders
     favorites.value = dashboardResult.favorites
+    rewardsSummary.value = dashboardResult.rewards ?? rewardsSummary.value
   } catch (error) {
     pointsError.value = formatFeatureError(error.message, 'Rewards')
     ordersError.value = formatFeatureError(error.message, 'Orders')
@@ -78,8 +116,45 @@ async function loadFavorites() {
   }
 }
 
+async function loadRewardsPanels() {
+  pointsLoading.value = true
+  rewardsLoading.value = true
+  activityLoading.value = true
+  redemptionsLoading.value = true
+  pointsError.value = ''
+  rewardsError.value = ''
+  activityError.value = ''
+  redemptionsError.value = ''
+
+  try {
+    const [rewardsResult, programResult, historyResult, redemptionsResult] = await Promise.all([
+      fetchMemberRewards(),
+      fetchRewardsProgram(),
+      fetchPointsHistory(),
+      fetchRewardsRedemptions(),
+    ])
+    rewardsSummary.value = rewardsResult
+    rewardsProgram.value = programResult
+    points.value = rewardsResult.currentPoints
+    pointsHistory.value = historyResult
+    redemptions.value = redemptionsResult.redemptions
+    redemptionTrackingEnabled.value = redemptionsResult.redemptionTrackingEnabled
+  } catch (error) {
+    pointsError.value = formatFeatureError(error.message, 'Rewards')
+    rewardsError.value = formatFeatureError(error.message, 'Rewards')
+    activityError.value = formatFeatureError(error.message, 'Rewards activity')
+    redemptionsError.value = formatFeatureError(error.message, 'Redemptions')
+  } finally {
+    pointsLoading.value = false
+    rewardsLoading.value = false
+    activityLoading.value = false
+    redemptionsLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadSummary()
+  loadRewardsPanels()
 })
 </script>
 
@@ -95,9 +170,10 @@ onMounted(() => {
       <div class="dashboard-hero-grid">
         <DashboardPoints
           :points="points"
+          :rewards="rewardsSummary"
           :is-loading="pointsLoading"
           :error-message="pointsError"
-          @retry="loadSummary"
+          @retry="loadRewardsPanels"
         />
 
         <BaseCard class="member-card" padding="lg">
@@ -110,11 +186,15 @@ onMounted(() => {
             </div>
             <div v-if="memberRecord?.tier">
               <dt>Rewards Tier</dt>
-              <dd>{{ formatTitleCase(memberRecord.tier) }}</dd>
+              <dd>{{ rewardTierLabel || formatTitleCase(memberRecord.tier) }}</dd>
             </div>
             <div v-if="memberRecord?.pointsToNextReward !== null && memberRecord?.pointsToNextReward !== undefined">
               <dt>Points to Next Reward</dt>
-              <dd>{{ memberRecord.pointsToNextReward }}</dd>
+              <dd>{{ rewardsSummary?.pointsToNextReward ?? memberRecord.pointsToNextReward }}</dd>
+            </div>
+            <div v-if="rewardsSummary?.lifetimePoints !== null && rewardsSummary?.lifetimePoints !== undefined">
+              <dt>Lifetime Points</dt>
+              <dd>{{ rewardsSummary.lifetimePoints }}</dd>
             </div>
             <div v-if="memberRecord?.joinDate">
               <dt>Join Date</dt>
@@ -183,6 +263,157 @@ onMounted(() => {
               <span>{{ [favorite.category, favorite.size || favorite.defaultSize, favorite.currentPrice ? `$${favorite.currentPrice.toFixed(2)}` : ''].filter(Boolean).join(' • ') }}</span>
             </RouterLink>
           </div>
+        </BaseCard>
+      </div>
+
+      <div class="dashboard-hero-grid">
+        <BaseCard padding="lg">
+          <p class="eyebrow">Rewards Activity</p>
+          <h2>Points earned by order</h2>
+
+          <LoadingState
+            v-if="activityLoading"
+            compact
+            title="Loading rewards activity"
+            description="Looking up points earned across your recent orders."
+          />
+          <ErrorState
+            v-else-if="activityError"
+            compact
+            title="Rewards activity unavailable"
+            :message="activityError"
+            action-label="Try Again"
+            @action="loadRewardsPanels"
+          />
+          <div v-else-if="recentPointsBars.length" class="rewards-chart">
+            <div
+              v-for="entry in recentPointsBars"
+              :key="entry.id"
+              class="rewards-chart__item"
+            >
+              <span class="rewards-chart__value">{{ entry.pointsEarned }}</span>
+              <span class="rewards-chart__bar" :style="{ height: entry.height }"></span>
+              <span class="rewards-chart__label">{{ formatDate(entry.date, { month: 'short', day: 'numeric' }) }}</span>
+            </div>
+          </div>
+          <EmptyState
+            v-else
+            compact
+            title="No rewards activity yet"
+            description="Once you start ordering, your points-earned history will show up here."
+          />
+        </BaseCard>
+
+        <BaseCard padding="lg">
+          <p class="eyebrow">How Rewards Work</p>
+          <h2>Program details</h2>
+
+          <LoadingState
+            v-if="rewardsLoading"
+            compact
+            title="Loading rewards program"
+            description="Checking tier thresholds and milestone details."
+          />
+          <ErrorState
+            v-else-if="rewardsError"
+            compact
+            title="Rewards program unavailable"
+            :message="rewardsError"
+            action-label="Try Again"
+            @action="loadRewardsPanels"
+          />
+          <div v-else class="detail-stack">
+            <p v-if="rewardsProgram?.pointsRule" class="detail-lead">{{ rewardsProgram.pointsRule }}</p>
+            <div v-if="rewardsProgram?.tiers?.length" class="favorites-list">
+              <div v-for="tier in rewardsProgram.tiers" :key="tier.name" class="favorite-link">
+                <strong>{{ formatTitleCase(tier.name) }}</strong>
+                <span>{{ tier.min_points }}+ points</span>
+              </div>
+            </div>
+            <div v-if="rewardsProgram?.rewardThresholds?.length" class="favorites-list">
+              <div v-for="threshold in rewardsProgram.rewardThresholds" :key="threshold.name" class="favorite-link">
+                <strong>{{ threshold.name }}</strong>
+                <span>{{ threshold.points_required }} points required</span>
+              </div>
+            </div>
+            <p v-if="rewardsSummary?.nextTierName" class="helper-text helper-text--compact">
+              {{ rewardsSummary.pointsToNextReward }} points until {{ formatTitleCase(rewardsSummary.nextTierName) }}.
+            </p>
+          </div>
+        </BaseCard>
+      </div>
+
+      <div class="dashboard-hero-grid">
+        <BaseCard padding="lg">
+          <p class="eyebrow">Recent Rewards</p>
+          <h2>Points activity</h2>
+
+          <LoadingState
+            v-if="activityLoading"
+            compact
+            title="Loading points history"
+            description="Pulling your recent rewards activity."
+          />
+          <ErrorState
+            v-else-if="activityError"
+            compact
+            title="Points history unavailable"
+            :message="activityError"
+            action-label="Try Again"
+            @action="loadRewardsPanels"
+          />
+          <div v-else-if="pointsHistory.length" class="favorites-list">
+            <div v-for="entry in pointsHistory.slice(0, 6)" :key="entry.id" class="favorite-link">
+              <strong>{{ formatDate(entry.date) }}</strong>
+              <span>
+                {{
+                  [
+                    entry.storeName || [entry.storeCity, entry.storeState].filter(Boolean).join(', '),
+                    `${entry.pointsEarned} pts`,
+                    formatCurrency(entry.orderTotal),
+                  ].filter(Boolean).join(' • ')
+                }}
+              </span>
+            </div>
+          </div>
+          <EmptyState
+            v-else
+            compact
+            title="No points history yet"
+            description="Your order-based point earnings will show up here."
+          />
+        </BaseCard>
+
+        <BaseCard padding="lg">
+          <p class="eyebrow">Redemptions</p>
+          <h2>Used rewards</h2>
+
+          <LoadingState
+            v-if="redemptionsLoading"
+            compact
+            title="Loading redemptions"
+            description="Checking whether you've redeemed any Coffee Club rewards yet."
+          />
+          <ErrorState
+            v-else-if="redemptionsError"
+            compact
+            title="Redemptions unavailable"
+            :message="redemptionsError"
+            action-label="Try Again"
+            @action="loadRewardsPanels"
+          />
+          <div v-else-if="redemptions.length" class="favorites-list">
+            <div v-for="redemption in redemptions" :key="redemption.id" class="favorite-link">
+              <strong>{{ redemption.rewardName }}</strong>
+              <span>{{ formatDate(redemption.redeemedAt) }} • {{ redemption.pointsUsed }} points • {{ formatTitleCase(redemption.status) }}</span>
+            </div>
+          </div>
+          <EmptyState
+            v-else
+            compact
+            :title="redemptionTrackingEnabled ? 'No redemptions yet' : 'Reward redemptions are coming soon'"
+            description="Your redeemed rewards will show up here once tracking is available."
+          />
         </BaseCard>
       </div>
 

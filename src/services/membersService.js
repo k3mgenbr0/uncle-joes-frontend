@@ -17,6 +17,67 @@ function normalizePoints(payload) {
   }
 }
 
+function normalizeRewardsSummary(payload) {
+  const record = extractRecord(payload, ['rewards', 'data', 'summary']) ?? payload ?? {}
+
+  return {
+    memberId: String(record.member_id ?? ''),
+    currentPoints: Number(record.current_points ?? record.points ?? 0),
+    lifetimePoints: Number(record.lifetime_points ?? 0),
+    rewardsTier: record.rewards_tier ?? '',
+    pointsToNextReward: Number(record.points_to_next_reward ?? 0),
+    nextTierName: record.next_tier_name ?? '',
+    currentTierMinPoints: Number(record.current_tier_min_points ?? 0),
+    nextTierMinPoints: Number(record.next_tier_min_points ?? 0),
+    nextRewardThreshold: Number(record.next_reward_threshold ?? 0),
+    currentRewardProgress: Number(record.current_reward_progress ?? record.current_points ?? 0),
+    pointsEarnedLast30Days: Number(record.points_earned_last_30_days ?? 0),
+    pointsEarnedLast90Days: Number(record.points_earned_last_90_days ?? 0),
+    bonusPrograms: Array.isArray(record.bonus_programs) ? record.bonus_programs : [],
+    raw: record,
+  }
+}
+
+function normalizePointsHistoryEntry(entry) {
+  return {
+    id: String(entry.order_id ?? entry.id ?? ''),
+    orderId: String(entry.order_id ?? entry.id ?? ''),
+    date: entry.order_date ?? entry.date ?? '',
+    storeId: String(entry.store_id ?? ''),
+    storeName: entry.store_name ?? '',
+    storeCity: entry.store_city ?? '',
+    storeState: entry.store_state ?? '',
+    orderTotal: Number(entry.order_total ?? entry.total ?? 0),
+    pointsEarned: Number(entry.points_earned ?? 0),
+    pointsRedeemed: Number(entry.points_redeemed ?? 0),
+    activityType: entry.activity_type ?? '',
+    raw: entry,
+  }
+}
+
+function normalizeRewardRedemption(entry) {
+  return {
+    id: String(entry.redemption_id ?? entry.id ?? ''),
+    redeemedAt: entry.redeemed_at ?? entry.date ?? '',
+    rewardName: entry.reward_name ?? entry.name ?? '',
+    pointsUsed: Number(entry.points_used ?? 0),
+    status: entry.status ?? '',
+    raw: entry,
+  }
+}
+
+function normalizeRewardsProgram(payload) {
+  const record = extractRecord(payload, ['program', 'data']) ?? payload ?? {}
+
+  return {
+    pointsRule: record.points_rule ?? '',
+    tiers: Array.isArray(record.tiers) ? record.tiers : [],
+    rewardThresholds: Array.isArray(record.reward_thresholds) ? record.reward_thresholds : [],
+    bonusPrograms: Array.isArray(record.bonus_programs) ? record.bonus_programs : [],
+    raw: record,
+  }
+}
+
 function normalizeOrderItem(item) {
   return {
     id: String(
@@ -108,18 +169,53 @@ export async function fetchMemberDashboard() {
     return {
       member: memberRecord ? normalizeMember(memberRecord) : null,
       points: normalizePoints(record.points ?? {}).value,
+      rewards: record.rewards ? normalizeRewardsSummary(record.rewards) : null,
       orders: extractCollection(record.orders, ['recent_orders']).map(normalizeOrder),
       favorites: extractCollection(record.favorites, ['items']).map(normalizeFavoriteItem),
-      pointsHistory: extractCollection(record.points_history, ['history']).map((entry) => ({
-        id: String(entry.order_id ?? entry.id ?? ''),
-        date: entry.order_date ?? entry.date ?? '',
-        points: Number(entry.points_earned ?? 0),
-        total: Number(entry.order_total ?? entry.total ?? 0),
-      })),
+      pointsHistory: extractCollection(record.points_history, ['history']).map(normalizePointsHistoryEntry),
       raw: record,
     }
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load your dashboard.'))
+  }
+}
+
+export async function fetchMemberRewards() {
+  try {
+    const response = await apiFetch('/api/member/rewards', { auth: true })
+    return normalizeRewardsSummary(response)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your rewards summary.'))
+  }
+}
+
+export async function fetchRewardsProgram() {
+  try {
+    const response = await apiFetch('/rewards/program')
+    return normalizeRewardsProgram(response)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load rewards program details.'))
+  }
+}
+
+export async function fetchPointsHistory() {
+  try {
+    const response = await apiFetch('/api/member/points/history', { auth: true })
+    return extractCollection(response, ['history', 'data']).map(normalizePointsHistoryEntry)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your rewards activity.'))
+  }
+}
+
+export async function fetchRewardsRedemptions() {
+  try {
+    const response = await apiFetch('/api/member/rewards/redemptions', { auth: true })
+    return {
+      redemptionTrackingEnabled: Boolean(response?.redemption_tracking_enabled),
+      redemptions: extractCollection(response, ['redemptions', 'data']).map(normalizeRewardRedemption),
+    }
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load your reward redemptions.'))
   }
 }
 
