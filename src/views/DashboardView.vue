@@ -69,6 +69,12 @@ const recentPointsBars = computed(() => {
 
   return entries.map((entry) => ({
     ...entry,
+    intensity:
+      (entry.pointsEarned || 0) >= maxPoints * 0.8
+        ? 'high'
+        : (entry.pointsEarned || 0) >= maxPoints * 0.45
+          ? 'medium'
+          : 'low',
     height: `${Math.max(18, ((entry.pointsEarned || 0) / maxPoints) * 100)}%`,
   }))
 })
@@ -320,7 +326,12 @@ onMounted(() => {
               class="rewards-chart__item"
             >
               <span class="rewards-chart__value">{{ entry.pointsEarned }}</span>
-              <span class="rewards-chart__bar" :style="{ height: entry.height }"></span>
+              <span class="rewards-chart__track">
+                <span
+                  :class="['rewards-chart__bar', `rewards-chart__bar--${entry.intensity}`]"
+                  :style="{ height: entry.height }"
+                ></span>
+              </span>
               <span class="rewards-chart__label">{{ formatDate(entry.date, { month: 'short', day: 'numeric' }) }}</span>
             </div>
           </div>

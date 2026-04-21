@@ -414,6 +414,10 @@ textarea {
   color: var(--color-walnut);
 }
 
+.detail-hero-card .size-toggle-group {
+  margin-top: 0.2rem;
+}
+
 .detail-image-wrap {
   margin-bottom: 1rem;
   overflow: hidden;
@@ -489,6 +493,13 @@ textarea {
 .favorite-link span,
 .related-link span {
   color: rgba(46, 24, 8, 0.76);
+}
+
+.related-link--button {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
 }
 
 .favorites-list--compact {
@@ -829,12 +840,36 @@ textarea {
   text-align: center;
 }
 
+.rewards-chart__track {
+  display: flex;
+  align-items: end;
+  width: 100%;
+  height: 7.5rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(228, 206, 175, 0.08), rgba(228, 206, 175, 0.28));
+  box-shadow: inset 0 0 0 1px rgba(120, 56, 12, 0.08);
+}
+
 .rewards-chart__bar {
   width: 100%;
   min-height: 0.9rem;
   border-radius: var(--radius-pill);
   background: linear-gradient(180deg, var(--color-almond), var(--color-caramel));
   box-shadow: inset 0 -1px 0 rgba(86, 42, 14, 0.12);
+}
+
+.rewards-chart__bar--high {
+  background: linear-gradient(180deg, #d97b2e, #9f4e13);
+}
+
+.rewards-chart__bar--medium {
+  background: linear-gradient(180deg, #d9a05a, #c8691c);
+}
+
+.rewards-chart__bar--low {
+  background: linear-gradient(180deg, #e6c79a, #d09259);
 }
 
 .nearby-store-list {

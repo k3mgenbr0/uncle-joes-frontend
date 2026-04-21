@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
@@ -8,11 +8,77 @@ import { fetchMenuItem } from '../services/menuService'
 import { dedupeLabels, formatCurrency, formatServiceLabel } from '../utils/formatters'
 
 const route = useRoute()
+const router = useRouter()
 const item = ref(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
 
 const itemId = computed(() => route.params.itemId)
+const SIZE_PRIORITY = {
+  Small: 1,
+  Medium: 2,
+  Large: 3,
+}
+
+const variantOptions = computed(() => {
+  if (!item.value) {
+    return []
+  }
+
+  const variants = [
+    {
+      id: item.value.id,
+      name: item.value.name,
+      category: item.value.category,
+      size: item.value.size,
+      price: item.value.price,
+      priceDisplay: item.value.priceDisplay,
+      calories: item.value.calories,
+      current: true,
+    },
+    ...item.value.relatedItems
+      .filter((related) => related.name === item.value.name)
+      .map((related) => ({
+        id: related.id,
+        name: related.name,
+        category: related.category || item.value.category,
+        size: related.size,
+        price: related.price ?? 0,
+        priceDisplay: related.price !== null && related.price !== undefined ? formatCurrency(related.price) : '',
+        calories: null,
+        current: false,
+      })),
+  ]
+
+  const seen = new Set()
+
+  return variants
+    .filter((variant) => {
+      const key = `${variant.size || 'default'}::${variant.id}`
+
+      if (!variant.id || seen.has(key)) {
+        return false
+      }
+
+      seen.add(key)
+      return true
+    })
+    .sort((left, right) => {
+      const leftPriority = SIZE_PRIORITY[left.size] ?? 99
+      const rightPriority = SIZE_PRIORITY[right.size] ?? 99
+
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority
+      }
+
+      return (left.size || '').localeCompare(right.size || '')
+    })
+})
+
+const alternateSizes = computed(() =>
+  variantOptions.value.filter((variant) => variant.id !== item.value?.id),
+)
+
 const detailRows = computed(() =>
   [
     item.value?.size ? { label: 'Size', value: item.value.size } : null,
@@ -20,6 +86,9 @@ const detailRows = computed(() =>
       ? { label: 'Calories', value: `${item.value.calories} calories` }
       : null,
     item.value?.caffeineMg ? { label: 'Caffeine', value: `${item.value.caffeineMg} mg` } : null,
+    item.value?.price || item.value?.priceDisplay
+      ? { label: 'Price', value: item.value.priceDisplay || formatCurrency(item.value.price) }
+      : null,
   ].filter(Boolean),
 )
 
@@ -47,6 +116,10 @@ const relatedItems = computed(() => {
   const seen = new Set()
 
   return item.value.relatedItems.filter((related) => {
+    if (related.name === item.value.name) {
+      return false
+    }
+
     const key = [
       related.id,
       related.name,
@@ -74,6 +147,14 @@ function formatRelatedMeta(related) {
   return [related.category, related.size, related.price !== null ? formatCurrency(related.price) : '']
     .filter(Boolean)
     .join(' • ')
+}
+
+function selectVariant(variantId) {
+  if (!variantId || variantId === item.value?.id) {
+    return
+  }
+
+  router.push({ name: 'menu-item-detail', params: { itemId: variantId } })
 }
 
 async function loadItem() {
@@ -135,6 +216,28 @@ onMounted(loadItem)
           <h1>{{ item.name }}</h1>
           <p v-if="item.description" class="detail-lead">{{ item.description }}</p>
 
+          <div v-if="variantOptions.length > 1" class="detail-stack">
+            <span class="detail-label">Choose a size</span>
+            <div class="size-toggle-group">
+              <button
+                v-for="variant in variantOptions"
+                :key="variant.id"
+                type="button"
+                :class="['size-toggle', { 'size-toggle--active': variant.id === item.id }]"
+                @click="selectVariant(variant.id)"
+              >
+                {{ variant.size }}
+              </button>
+            </div>
+            <p class="helper-text helper-text--compact">
+              {{
+                item.size
+                  ? `${item.size} size selected`
+                  : 'This item is available in multiple sizes.'
+              }}
+            </p>
+          </div>
+
           <div v-if="item.availabilityStatus || item.seasonal || displayTags.length" class="service-badges">
             <span v-if="item.availabilityStatus" class="badge">{{ formatServiceLabel(item.availabilityStatus) }}</span>
             <span v-if="item.seasonal" class="badge">Seasonal</span>
@@ -149,7 +252,24 @@ onMounted(loadItem)
           </div>
         </BaseCard>
 
-        <div v-if="item.ingredients.length || item.allergens.length || item.customizationOptions.length || relatedItems.length" class="detail-sidebar">
+        <div v-if="alternateSizes.length || item.ingredients.length || item.allergens.length || item.customizationOptions.length || relatedItems.length" class="detail-sidebar">
+          <BaseCard v-if="alternateSizes.length" padding="lg">
+            <p class="eyebrow">Other Sizes</p>
+            <h2>Pick the right fit</h2>
+            <div class="related-links">
+              <button
+                v-for="variant in alternateSizes"
+                :key="variant.id"
+                type="button"
+                class="related-link related-link--button"
+                @click="selectVariant(variant.id)"
+              >
+                <strong>{{ variant.size || 'Another size' }}</strong>
+                <span>{{ variant.priceDisplay || formatCurrency(variant.price) }}</span>
+              </button>
+            </div>
+          </BaseCard>
+
           <BaseCard v-if="item.ingredients.length" padding="lg">
             <p class="eyebrow">Ingredients</p>
             <h2>What’s in the cup</h2>
