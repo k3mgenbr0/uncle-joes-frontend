@@ -7,6 +7,7 @@ import ErrorState from '../components/ErrorState.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { fetchOrderDetail } from '../services/membersService'
 import { formatCurrency, formatDateTime, formatOrderStatus, formatPaymentMethod, formatPaymentStatus, formatPhone, formatShortOrderId, formatStoreLabel } from '../utils/formatters'
+import logoIcon from '../assets/branding/logo-icon.png'
 
 const route = useRoute()
 const order = ref(null)
@@ -60,6 +61,13 @@ onMounted(loadOrder)
 
       <div v-else-if="order" class="detail-layout">
         <BaseCard class="detail-hero-card" padding="lg">
+          <div class="detail-brand-row">
+            <img :src="logoIcon" alt="Uncle Joe's Coffee" class="detail-brand-row__logo" />
+            <div>
+              <span class="eyebrow">Order Details</span>
+              <strong class="detail-brand-row__title">Pickup receipt and timing</strong>
+            </div>
+          </div>
           <div class="card-topline">
             <span class="badge">Order {{ formatShortOrderId(order.id) }}</span>
             <span class="price-tag">{{ formatCurrency(order.total) }}</span>

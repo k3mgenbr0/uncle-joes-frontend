@@ -141,6 +141,12 @@ textarea {
   max-width: 34rem;
 }
 
+.hero-brand-image {
+  display: block;
+  width: min(100%, 30rem);
+  margin-bottom: 1rem;
+}
+
 .hero-copy h1 {
   font-size: clamp(2.8rem, 7vw, 5rem);
 }
@@ -161,6 +167,12 @@ textarea {
 
 .hero-feature-card {
   align-self: start;
+}
+
+.hero-feature-logo {
+  display: block;
+  width: min(100%, 15rem);
+  margin: 0 auto 1rem;
 }
 
 .feature-overline {
@@ -313,20 +325,10 @@ textarea {
   color: var(--color-walnut);
 }
 
-.brand-mark strong,
-.brand-mark small {
+.brand-mark__image {
   display: block;
-}
-
-.brand-mark__badge {
-  display: inline-grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-saddle), var(--color-caramel));
-  color: var(--color-white);
-  font-weight: 800;
+  height: 3.1rem;
+  width: auto;
 }
 
 .nav-toggle {
@@ -386,6 +388,17 @@ textarea {
 .site-footer p,
 .footer-links a {
   color: rgba(255, 253, 249, 0.74);
+}
+
+.footer-brand {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.footer-brand__image {
+  display: block;
+  width: min(100%, 15rem);
+  height: auto;
 }
 
 .detail-page {
@@ -569,6 +582,37 @@ textarea {
 .filters-card,
 .auth-card {
   margin-bottom: 1.5rem;
+}
+
+.auth-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.auth-brand-card {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  background:
+    linear-gradient(145deg, rgba(86, 42, 14, 0.98), rgba(120, 56, 12, 0.92));
+  color: rgba(255, 253, 249, 0.94);
+}
+
+.auth-brand-card .section-heading h1,
+.auth-brand-card .section-heading p,
+.auth-brand-card .feature-list,
+.auth-brand-card .eyebrow {
+  color: inherit;
+}
+
+.auth-brand-card__logo {
+  display: block;
+  width: min(100%, 15rem);
+  margin: 0 auto;
+}
+
+.auth-feature-list {
+  margin-top: 0;
 }
 
 .filters-actions {
@@ -796,6 +840,31 @@ textarea {
 
 .detail-cta-row {
   margin-top: 1rem;
+}
+
+.detail-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.detail-brand-row--compact {
+  margin-bottom: 0.85rem;
+}
+
+.detail-brand-row__logo {
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 10px 24px rgba(86, 42, 14, 0.14);
+}
+
+.detail-brand-row__title {
+  display: block;
+  color: var(--color-walnut);
+  font-size: 0.95rem;
 }
 
 .rewards-range-control {
@@ -1154,6 +1223,11 @@ textarea {
     grid-template-columns: 1.4fr repeat(3, minmax(150px, 1fr));
   }
 
+  .auth-layout {
+    grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
   .order-builder-layout {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
     align-items: start;
@@ -1224,6 +1298,14 @@ textarea {
   .hours-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .brand-mark__image {
+    height: 2.5rem;
+  }
+
+  .detail-brand-row {
+    align-items: flex-start;
   }
 
   .filters-inline {

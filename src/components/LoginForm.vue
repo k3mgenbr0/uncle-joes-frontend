@@ -59,7 +59,7 @@ async function handleSubmit() {
     </p>
     <p v-if="errorMessage" class="helper-text helper-text--error">{{ errorMessage }}</p>
 
-    <BaseButton type="submit" block>
+    <BaseButton type="submit" block :disabled="isSubmitting">
       {{ isSubmitting ? 'Signing In...' : 'Sign In' }}
     </BaseButton>
   </form>

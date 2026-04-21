@@ -9,6 +9,7 @@ import EmptyState from '../components/EmptyState.vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchMemberDashboard, fetchMemberRewards, fetchPointsHistory, fetchRewardsProgram, fetchRewardsRedemptions, fetchSessionMemberFavorites, fetchSessionMemberOrders } from '../services/membersService'
 import { formatMonthDay, formatPhone, formatDate, formatFeatureError, formatTitleCase, formatCurrency } from '../utils/formatters'
+import logoIcon from '../assets/branding/logo-icon.png'
 
 const authStore = useAuthStore()
 
@@ -82,6 +83,38 @@ const activeBonusPrograms = computed(() => [
   ...(rewardsSummary.value?.bonusPrograms || []),
   ...(rewardsProgram.value?.bonusPrograms || []),
 ])
+const programMilestones = computed(() => {
+  const seen = new Set()
+  const milestones = []
+
+  for (const tier of rewardsProgram.value?.tiers || []) {
+    const key = `tier::${tier.name}::${tier.min_points}`
+
+    if (!seen.has(key)) {
+      seen.add(key)
+      milestones.push({
+        id: key,
+        title: formatTitleCase(tier.name),
+        subtitle: `${tier.min_points}+ points`,
+      })
+    }
+  }
+
+  for (const threshold of rewardsProgram.value?.rewardThresholds || []) {
+    const key = `threshold::${threshold.name}::${threshold.points_required}`
+
+    if (!seen.has(key)) {
+      seen.add(key)
+      milestones.push({
+        id: key,
+        title: threshold.name,
+        subtitle: `${threshold.points_required} points required`,
+      })
+    }
+  }
+
+  return milestones
+})
 
 async function loadSummary() {
   pointsLoading.value = true
@@ -199,7 +232,13 @@ onMounted(() => {
         />
 
         <BaseCard class="member-card" padding="lg">
-          <p class="eyebrow">Member Details</p>
+          <div class="detail-brand-row detail-brand-row--compact">
+            <img :src="logoIcon" alt="Uncle Joe's Coffee" class="detail-brand-row__logo" />
+            <div>
+              <p class="eyebrow">Member Details</p>
+              <strong class="detail-brand-row__title">Your Coffee Club profile</strong>
+            </div>
+          </div>
           <h2>{{ authStore.memberDisplayName }}</h2>
           <dl class="member-details">
             <div v-if="memberRecord?.email">
@@ -363,16 +402,10 @@ onMounted(() => {
           />
           <div v-else class="detail-stack">
             <p v-if="rewardsProgram?.pointsRule" class="detail-lead">{{ rewardsProgram.pointsRule }}</p>
-            <div v-if="rewardsProgram?.tiers?.length" class="favorites-list">
-              <div v-for="tier in rewardsProgram.tiers" :key="tier.name" class="favorite-link">
-                <strong>{{ formatTitleCase(tier.name) }}</strong>
-                <span>{{ tier.min_points }}+ points</span>
-              </div>
-            </div>
-            <div v-if="rewardsProgram?.rewardThresholds?.length" class="favorites-list">
-              <div v-for="threshold in rewardsProgram.rewardThresholds" :key="threshold.name" class="favorite-link">
-                <strong>{{ threshold.name }}</strong>
-                <span>{{ threshold.points_required }} points required</span>
+            <div v-if="programMilestones.length" class="favorites-list">
+              <div v-for="milestone in programMilestones" :key="milestone.id" class="favorite-link">
+                <strong>{{ milestone.title }}</strong>
+                <span>{{ milestone.subtitle }}</span>
               </div>
             </div>
             <div v-if="activeBonusPrograms.length" class="favorites-list">
@@ -454,12 +487,10 @@ onMounted(() => {
               <span>{{ formatDate(redemption.redeemedAt) }} • {{ redemption.pointsUsed }} points • {{ formatTitleCase(redemption.status) }}</span>
             </div>
           </div>
-          <EmptyState
-            v-else
-            compact
-            :title="redemptionTrackingEnabled ? 'No redemptions yet' : 'Reward redemptions are coming soon'"
-            description="Your redeemed rewards will show up here once tracking is available."
-          />
+          <div v-else class="favorite-link">
+            <strong>{{ redemptionTrackingEnabled ? 'No redemptions yet' : 'Reward redemptions are coming soon' }}</strong>
+            <span>Your redeemed rewards will show up here once tracking is available.</span>
+          </div>
         </BaseCard>
       </div>
 

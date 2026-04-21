@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseCard from '../components/BaseCard.vue'
 import { useAuthStore } from '../stores/auth'
+import logoHorizontal from '../assets/branding/logo-horizontal.png'
+import logoStacked from '../assets/branding/logo-stacked.png'
 
 const authStore = useAuthStore()
 const memberPrimaryCta = computed(() => (authStore.isAuthenticated ? '/orders' : '/login'))
@@ -30,7 +32,8 @@ const benefits = [
       <div class="container hero-grid">
         <div class="hero-copy">
           <span class="eyebrow">Warm coffee. Better mornings.</span>
-          <h1>Uncle Joe's Coffee Company</h1>
+          <img :src="logoHorizontal" alt="Uncle Joe's Coffee" class="hero-brand-image" />
+          <h1>Your neighborhood coffee stop, ready when you are.</h1>
           <p>
             Sip your way through handcrafted favorites, discover neighborhood locations,
             and keep your Coffee Club perks close at hand.
@@ -50,6 +53,7 @@ const benefits = [
         </div>
 
         <BaseCard class="hero-feature-card" padding="lg">
+          <img :src="logoStacked" alt="Uncle Joe's Coffee badge" class="hero-feature-logo" />
           <p class="feature-overline">Coffee Club</p>
           <h2>Rewards that feel like your regular order knows your name.</h2>
           <p>
