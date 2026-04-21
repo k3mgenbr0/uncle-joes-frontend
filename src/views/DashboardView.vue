@@ -6,7 +6,7 @@ import OrderHistory from '../components/OrderHistory.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders } from '../services/membersService'
-import { formatMonthDay, formatPhone, formatStoreLabel, formatDate, formatFeatureError, formatTitleCase } from '../utils/formatters'
+import { formatMonthDay, formatPhone, formatDate, formatFeatureError, formatTitleCase } from '../utils/formatters'
 
 const authStore = useAuthStore()
 
@@ -67,7 +67,10 @@ async function loadFavorites() {
   favoritesError.value = ''
 
   try {
-    favorites.value = await fetchSessionMemberFavorites({ limit: 6 })
+    favorites.value = await fetchSessionMemberFavorites({
+      limit: 6,
+      storeId: preferredStore.value?.locationId || preferredStore.value?.id || undefined,
+    })
   } catch (error) {
     favoritesError.value = formatFeatureError(error.message, 'Favorites')
   } finally {
@@ -140,12 +143,12 @@ onMounted(() => {
           <p class="eyebrow">Preferred Store</p>
           <h2>
             {{
-              preferredStore
-                ? formatStoreLabel(preferredStore?.store_name, preferredStore?.city, preferredStore?.state)
-                : 'No preferred store yet'
+              preferredStore?.displayName
+                || preferredStore?.storeName
+                || 'No preferred store yet'
             }}
           </h2>
-          <p v-if="preferredStore?.full_address" class="detail-lead">{{ preferredStore.full_address }}</p>
+          <p v-if="preferredStore?.address || preferredStore?.fullAddress" class="detail-lead">{{ preferredStore.address || preferredStore.fullAddress }}</p>
           <div class="detail-stack">
             <p v-if="preferredStore?.phone" class="detail-lead">Phone: {{ formatPhone(preferredStore.phone) }}</p>
           </div>
@@ -177,7 +180,7 @@ onMounted(() => {
               class="favorite-link"
             >
               <strong>{{ favorite.name }}</strong>
-              <span>{{ favorite.totalQuantity }} ordered • {{ favorite.totalOrders }} visits</span>
+              <span>{{ [favorite.category, favorite.size || favorite.defaultSize, favorite.currentPrice ? `$${favorite.currentPrice.toFixed(2)}` : ''].filter(Boolean).join(' • ') }}</span>
             </RouterLink>
           </div>
         </BaseCard>

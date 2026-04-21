@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import BaseCard from '../components/BaseCard.vue'
 import { useAuthStore } from '../stores/auth'
-import { formatDate, formatMonthDay, formatPhone, formatStoreLabel } from '../utils/formatters'
+import { formatDate, formatMonthDay, formatPhone, formatTitleCase } from '../utils/formatters'
 
 const authStore = useAuthStore()
 const preferredStore = computed(() => authStore.currentUser?.preferredStore ?? null)
@@ -32,7 +32,7 @@ const preferredStore = computed(() => authStore.currentUser?.preferredStore ?? n
             </div>
             <div v-if="authStore.currentUser?.tier">
               <dt>Rewards Tier</dt>
-              <dd>{{ authStore.currentUser.tier }}</dd>
+              <dd>{{ formatTitleCase(authStore.currentUser.tier) }}</dd>
             </div>
             <div v-if="authStore.currentUser?.joinDate">
               <dt>Join Date</dt>
@@ -47,8 +47,8 @@ const preferredStore = computed(() => authStore.currentUser?.preferredStore ?? n
 
         <BaseCard v-if="preferredStore" class="member-card" padding="lg">
           <p class="eyebrow">Home Store</p>
-          <h2>{{ formatStoreLabel(preferredStore?.store_name, preferredStore?.city, preferredStore?.state) }}</h2>
-          <p v-if="preferredStore?.full_address" class="detail-lead">{{ preferredStore.full_address }}</p>
+          <h2>{{ preferredStore?.displayName || preferredStore?.storeName }}</h2>
+          <p v-if="preferredStore?.address || preferredStore?.fullAddress" class="detail-lead">{{ preferredStore.address || preferredStore.fullAddress }}</p>
           <p v-if="preferredStore?.phone" class="detail-lead">Phone: {{ formatPhone(preferredStore.phone) }}</p>
         </BaseCard>
       </div>

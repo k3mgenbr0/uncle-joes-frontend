@@ -70,11 +70,16 @@ function normalizeOrder(order) {
 function normalizeFavoriteItem(item) {
   return {
     id: String(item.menu_item_id ?? item.item_id ?? ''),
+    menuItemId: String(item.menu_item_id ?? item.item_id ?? ''),
     name: item.item_name ?? item.name ?? '',
     category: item.category ?? '',
     size: item.size ?? '',
+    availableSizes: Array.isArray(item.available_sizes) ? item.available_sizes : [],
+    defaultSize: item.default_size ?? '',
     currentPrice: Number(item.current_price ?? 0),
     imageUrl: item.image_url ?? '',
+    availableAtStore: item.available_at_store ?? null,
+    storeAvailabilityStatus: item.store_availability_status ?? '',
     isExplicit: Boolean(item.is_explicit ?? false),
     totalOrders: Number(item.total_orders ?? 0),
     totalQuantity: Number(item.total_quantity ?? 0),
@@ -175,6 +180,10 @@ export async function fetchSessionMemberFavorites(options = {}) {
       params.set('window_days', String(options.windowDays))
     }
 
+    if (options.storeId) {
+      params.set('store_id', String(options.storeId))
+    }
+
     const response = await apiFetch(`/api/member/favorites?${params.toString()}`, { auth: true })
     return extractCollection(response, ['favorites', 'data']).map(normalizeFavoriteItem)
   } catch (error) {
@@ -244,7 +253,8 @@ export async function fetchMemberSummary(memberId) {
 
 export async function fetchMemberFavorites(memberId) {
   try {
-    const response = await apiFetch(`/members/${memberId}/favorites?limit=6`, { auth: true })
+    const params = new URLSearchParams({ limit: '6' })
+    const response = await apiFetch(`/members/${memberId}/favorites?${params.toString()}`, { auth: true })
     return extractCollection(response, ['favorites', 'data']).map(normalizeFavoriteItem)
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load your favorite items.'))

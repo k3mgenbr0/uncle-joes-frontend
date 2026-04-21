@@ -141,6 +141,18 @@ export function formatPhone(value) {
 }
 
 export function formatStoreLabel(locationName, city, state) {
+  if (locationName && typeof locationName === 'object') {
+    return (
+      locationName.displayName
+      || locationName.display_name
+      || locationName.storeName
+      || locationName.store_name
+      || locationName.name
+      || [locationName.city, locationName.state].filter(Boolean).join(', ')
+      || 'Location unavailable'
+    )
+  }
+
   return locationName || [city, state].filter(Boolean).join(', ') || 'Location unavailable'
 }
 

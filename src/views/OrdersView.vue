@@ -11,9 +11,9 @@ import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
-import { fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
+import { fetchNearbyLocations, fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
 import { createPickupOrder } from '../services/ordersService'
-import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone } from '../utils/formatters'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -47,6 +47,7 @@ const orderSort = ref('newest')
 const visibleOrderCount = ref(6)
 const cart = ref([])
 const explicitFavoriteIds = ref(new Set())
+const favoriteItems = ref([])
 const dashboardPointsHistory = ref([])
 const userCoordinates = ref(null)
 
@@ -66,7 +67,33 @@ const categories = computed(() => [
 
 const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
 const favoriteGroups = computed(() =>
-  groupedMenuItems.value.filter((item) => isFavorite(item)),
+  favoriteItems.value.map((favorite) => {
+    const matchingGroup = groupedMenuItems.value.find((group) =>
+      group.variants.some((variant) => variant.id === favorite.menuItemId),
+    )
+    const matchingVariant =
+      matchingGroup?.variants.find((variant) => variant.id === favorite.menuItemId)
+      ?? null
+
+    return {
+      ...favorite,
+      groupId: matchingGroup?.id ?? favorite.menuItemId,
+      matchingVariant,
+      displaySize: favorite.size || favorite.defaultSize || matchingVariant?.size || '',
+      displayPrice:
+        favorite.currentPrice
+        || matchingVariant?.price
+        || 0,
+      displayPriceLabel:
+        favorite.currentPrice
+          ? formatCurrency(favorite.currentPrice)
+          : matchingVariant?.priceDisplay || formatCurrency(matchingVariant?.price),
+      availableAtStore:
+        favorite.availableAtStore
+        ?? matchingVariant?.availableAtStore
+        ?? null,
+    }
+  }),
 )
 const filteredStoreOptions = computed(() => {
   const query = storeSearchTerm.value.trim().toLowerCase()
@@ -81,6 +108,9 @@ const filteredStoreOptions = computed(() => {
       location.city,
       location.state,
       location.address,
+      location.displayName,
+      location.region,
+      location.metroArea,
       location.nearBy,
     ]
       .filter(Boolean)
@@ -144,9 +174,18 @@ const hasMoreOrders = computed(() => filteredOrders.value.length > visibleOrderC
 const selectedLocation = computed(() =>
   locations.value.find((location) => location.id === selectedStoreId.value) ?? null,
 )
-const nearbyStores = computed(() =>
-  sortNearbyLocations(locations.value, selectedLocation.value, userCoordinates.value).slice(0, 3),
+const selectedLocationLabel = computed(() =>
+  selectedLocation.value ? formatStoreOptionLabel(selectedLocation.value, locations.value) : '',
 )
+const nearbyStores = computed(() =>
+  (nearbyLocationSuggestions.value.length
+    ? nearbyLocationSuggestions.value
+    : sortNearbyLocations(locations.value, selectedLocation.value, userCoordinates.value)
+  )
+    .filter((location) => location.id !== selectedStoreId.value)
+    .slice(0, 3),
+)
+const nearbyLocationSuggestions = ref([])
 
 const cartItemCount = computed(() =>
   cart.value.reduce((total, item) => total + item.quantity, 0),
@@ -248,6 +287,24 @@ function resolveUserCoordinates() {
       },
     )
   })
+}
+
+async function loadNearbySuggestions() {
+  if (!userCoordinates.value?.latitude || !userCoordinates.value?.longitude) {
+    nearbyLocationSuggestions.value = []
+    return
+  }
+
+  try {
+    const suggestions = await fetchNearbyLocations(userCoordinates.value.latitude, userCoordinates.value.longitude, {
+      orderableOnly: true,
+      openForBusiness: true,
+      limit: 4,
+    })
+    nearbyLocationSuggestions.value = suggestions
+  } catch {
+    nearbyLocationSuggestions.value = []
+  }
 }
 
 function clearPickupTime() {
@@ -410,6 +467,7 @@ async function chooseDefaultStore(locationResult) {
 
   const preferredStoreId =
     authStore.currentUser?.preferredStoreId
+    || authStore.currentUser?.preferredStore?.locationId
     || authStore.currentUser?.preferredStore?.location_id
     || authStore.currentUser?.preferredStore?.id
 
@@ -423,7 +481,10 @@ async function chooseDefaultStore(locationResult) {
   }
 
   userCoordinates.value = await resolveUserCoordinates()
-  const closestStore = findClosestLocation(locationResult, userCoordinates.value)
+  await loadNearbySuggestions()
+  const closestStore =
+    nearbyLocationSuggestions.value.find((location) => locationResult.some((entry) => entry.id === location.id))
+    ?? findClosestLocation(locationResult, userCoordinates.value)
   selectedStoreId.value = closestStore?.id ?? locationResult[0].id
 }
 
@@ -455,6 +516,29 @@ function selectVariant(groupId, variantId) {
 
 function isFavorite(group) {
   return group.variants.some((variant) => explicitFavoriteIds.value.has(variant.id))
+}
+
+function addFavoriteToCart(favorite) {
+  const matchingGroup = groupedMenuItems.value.find((group) =>
+    group.variants.some((variant) => variant.id === favorite.menuItemId),
+  )
+  const matchingVariant =
+    matchingGroup?.variants.find((variant) => variant.id === favorite.menuItemId)
+    ?? matchingGroup?.variants.find((variant) => variant.size === favorite.defaultSize)
+    ?? matchingGroup?.variants[0]
+
+  if (!matchingGroup || !matchingVariant) {
+    return
+  }
+
+  addToCart({
+    id: matchingVariant.id,
+    name: matchingGroup.name,
+    size: matchingVariant.size,
+    category: matchingGroup.category || favorite.category,
+    price: matchingVariant.price,
+    availableAtStore: matchingVariant.availableAtStore,
+  })
 }
 
 async function toggleFavorite(group) {
@@ -638,11 +722,12 @@ async function loadBuilderData() {
   }
 
   try {
-    const favorites = await fetchSessionMemberFavorites({ limit: 50 })
+    const favorites = await fetchSessionMemberFavorites({ limit: 50, storeId: selectedStoreId.value || undefined })
+    favoriteItems.value = favorites
     explicitFavoriteIds.value = new Set(
       favorites
         .filter((favorite) => favorite.isExplicit)
-        .map((favorite) => favorite.id),
+        .map((favorite) => favorite.menuItemId),
     )
   } catch (error) {
     favoriteError.value = error.message
@@ -657,6 +742,13 @@ async function refreshMenuForSelectedStore() {
   try {
     const menuResult = await fetchMenuForStore(selectedStoreId.value)
     applyMenuItems(menuResult)
+    const favorites = await fetchSessionMemberFavorites({ limit: 50, storeId: selectedStoreId.value || undefined })
+    favoriteItems.value = favorites
+    explicitFavoriteIds.value = new Set(
+      favorites
+        .filter((favorite) => favorite.isExplicit)
+        .map((favorite) => favorite.menuItemId),
+    )
   } catch (error) {
     builderError.value = error.message
   } finally {
@@ -849,8 +941,8 @@ watch([pickupTime, selectedStoreId], () => {
             </label>
 
             <div v-if="selectedLocation" class="order-store-summary">
-              <strong>{{ formatStoreOptionLabel(selectedLocation, locations) }}</strong>
-              <span v-if="selectedLocation.address">{{ selectedLocation.address }}</span>
+              <strong>{{ selectedLocationLabel }}</strong>
+              <span v-if="selectedLocation.address || selectedLocation.fullAddress">{{ selectedLocation.address || selectedLocation.fullAddress }}</span>
               <span v-if="selectedLocation.phone">Phone: {{ formatPhone(selectedLocation.phone) }}</span>
               <span v-if="selectedLocation.hoursTodayLabel">Today: {{ selectedLocation.hoursTodayLabel }}</span>
               <span
@@ -975,13 +1067,13 @@ watch([pickupTime, selectedStoreId], () => {
               <div class="favorites-list">
                 <div v-for="item in favoriteGroups" :key="item.id" class="favorite-link">
                   <strong>{{ item.name }}</strong>
-                  <span>{{ [getSelectedVariant(item)?.size, getSelectedVariant(item)?.priceDisplay || formatCurrency(getSelectedVariant(item)?.price)].filter(Boolean).join(' • ') }}</span>
+                  <span>{{ [item.category, item.displaySize, item.displayPriceLabel].filter(Boolean).join(' • ') }}</span>
                   <BaseButton
                     size="sm"
-                    :disabled="getSelectedVariant(item)?.availableAtStore === false"
-                    @click="addToCart(buildCartItem(item))"
+                    :disabled="item.availableAtStore === false"
+                    @click="addFavoriteToCart(item)"
                   >
-                    Add Favorite
+                    {{ item.availableAtStore === false ? 'Unavailable at Store' : 'Add Favorite' }}
                   </BaseButton>
                 </div>
               </div>

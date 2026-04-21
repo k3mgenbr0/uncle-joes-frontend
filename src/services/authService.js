@@ -2,6 +2,25 @@ import { apiFetch, extractRecord, getErrorMessage } from './api'
 
 const STORAGE_KEY = 'uncle-joes-member-session'
 
+function normalizePreferredStore(store) {
+  if (!store || typeof store !== 'object') {
+    return null
+  }
+
+  return {
+    id: String(store.id ?? store.location_id ?? ''),
+    locationId: String(store.location_id ?? store.id ?? ''),
+    storeName: store.store_name ?? store.name ?? '',
+    displayName: store.display_name ?? '',
+    city: store.city ?? '',
+    state: store.state ?? '',
+    fullAddress: store.full_address ?? '',
+    address: store.address ?? '',
+    phone: store.phone ?? '',
+    raw: store,
+  }
+}
+
 export function normalizeMember(payload) {
   const record = extractRecord(payload, ['member', 'user', 'data', 'result'])
 
@@ -29,7 +48,7 @@ export function normalizeMember(payload) {
     tier: record.rewards_tier ?? record.tier ?? record.membership_tier ?? '',
     pointsToNextReward: record.points_to_next_reward ?? null,
     preferredStoreId: record.preferred_store_id ?? record.home_store ?? '',
-    preferredStore: record.preferred_store ?? null,
+    preferredStore: normalizePreferredStore(record.preferred_store),
     joinDate: record.join_date ?? '',
     birthdayMonthDay: record.birthday_month_day ?? '',
     marketingOptIn: record.marketing_opt_in ?? null,

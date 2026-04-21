@@ -36,6 +36,7 @@ function normalizeLocation(location) {
     id: String(location.id ?? location.location_id ?? ''),
     name: location.name ?? location.store_name ?? '',
     storeName: location.store_name ?? location.name ?? '',
+    displayName: location.display_name ?? '',
     city: location.city ?? '',
     state: location.state ?? '',
     address: addressOne,
@@ -64,6 +65,10 @@ function normalizeLocation(location) {
     pickupSupported: location.pickup_supported ?? null,
     dineInSupported: location.dine_in_supported ?? null,
     nearBy: location.near_by ?? '',
+    nearbyStoreIds: Array.isArray(location.nearby_store_ids) ? location.nearby_store_ids.map(String) : [],
+    region: location.region ?? '',
+    metroArea: location.metro_area ?? '',
+    distanceMiles: location.distance_miles ?? null,
     raw: location,
   }
 }
@@ -75,6 +80,10 @@ export function isStoreOrderable(store) {
 export function formatStoreOptionLabel(location, locations = []) {
   if (!location) {
     return 'Store unavailable'
+  }
+
+  if (location.displayName) {
+    return location.displayName
   }
 
   const city = location.city || 'Store'
@@ -136,10 +145,13 @@ export function sortNearbyLocations(locations = [], selectedLocation = null, use
     return []
   }
 
+  const nearbyStoreIds = new Set((selectedLocation.nearbyStoreIds || []).map(String))
   const selectedKeywords = new Set([
     ...parseNearByKeywords(selectedLocation.nearBy),
     ...parseNearByKeywords(selectedLocation.city),
     ...parseNearByKeywords(selectedLocation.state),
+    ...parseNearByKeywords(selectedLocation.region),
+    ...parseNearByKeywords(selectedLocation.metroArea),
   ])
 
   return [...locations]
@@ -150,6 +162,7 @@ export function sortNearbyLocations(locations = [], selectedLocation = null, use
         (total, keyword) => total + (selectedKeywords.has(keyword) ? 1 : 0),
         0,
       )
+      const linkedScore = nearbyStoreIds.has(location.id) ? 3 : 0
 
       const distanceFromSelected = distanceBetween(selectedLocation, location)
       const distanceFromUser = userCoordinates
@@ -164,7 +177,7 @@ export function sortNearbyLocations(locations = [], selectedLocation = null, use
 
       return {
         ...location,
-        nearbyKeywordScore: keywordScore,
+        nearbyKeywordScore: keywordScore + linkedScore,
         nearbyDistance: Number.isFinite(distanceFromSelected) ? distanceFromSelected : distanceFromUser,
       }
     })
@@ -222,6 +235,36 @@ export async function fetchLocations(options = {}) {
 export async function fetchOrderableLocations() {
   const locations = await fetchLocations({ orderableOnly: true })
   return locations.filter((location) => location.openForBusiness === true)
+}
+
+export async function fetchNearbyLocations(latitude, longitude, options = {}) {
+  try {
+    if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+      return []
+    }
+
+    const params = new URLSearchParams({
+      lat: String(latitude),
+      lng: String(longitude),
+    })
+
+    if (options.orderableOnly !== false) {
+      params.set('orderable_only', 'true')
+    }
+
+    if (options.openForBusiness !== undefined) {
+      params.set('open_for_business', String(options.openForBusiness))
+    }
+
+    if (options.limit) {
+      params.set('limit', String(options.limit))
+    }
+
+    const response = await apiFetch(`/locations/nearby?${params.toString()}`)
+    return extractCollection(response, ['locations', 'data', 'stores']).map(normalizeLocation)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load nearby locations right now.'))
+  }
 }
 
 export async function fetchLocation(locationId) {
