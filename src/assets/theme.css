@@ -1217,6 +1217,29 @@ textarea {
   border: 1px solid rgba(120, 56, 12, 0.08);
 }
 
+.pickup-window-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.pickup-window-list__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.pickup-window-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 252, 247, 0.9);
+  border: 1px solid rgba(120, 56, 12, 0.1);
+  color: rgba(86, 42, 14, 0.88);
+  font-size: 0.82rem;
+}
+
 .detail-cta-row {
   margin-top: 1rem;
 }
@@ -1264,6 +1287,20 @@ textarea {
 
 .favorites-panel--compact {
   gap: 0.55rem;
+}
+
+.pickup-preview {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(228, 206, 175, 0.12);
+  border: 1px solid rgba(120, 56, 12, 0.08);
+}
+
+.pickup-preview-notes {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .rewards-chart {

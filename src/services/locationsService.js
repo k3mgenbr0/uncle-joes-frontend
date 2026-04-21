@@ -73,6 +73,24 @@ function normalizeLocation(location) {
   }
 }
 
+function normalizeLocationAvailability(payload) {
+  const record = extractRecord(payload, ['availability', 'data']) ?? payload ?? {}
+
+  return {
+    locationId: String(record.location_id ?? record.id ?? ''),
+    displayName: record.display_name ?? '',
+    orderingAvailable: record.ordering_available ?? null,
+    openNow: record.open_now ?? null,
+    acceptingOrdersNow: record.accepting_orders_now ?? null,
+    availabilityStatus: record.availability_status ?? '',
+    availabilityMessage: record.availability_message ?? '',
+    nextOpenAt: record.next_open_at ?? '',
+    nextCloseAt: record.next_close_at ?? '',
+    validPickupWindows: Array.isArray(record.valid_pickup_windows) ? record.valid_pickup_windows : [],
+    raw: record,
+  }
+}
+
 export function isStoreOrderable(store) {
   return store?.orderingAvailable === true
 }
@@ -273,5 +291,14 @@ export async function fetchLocation(locationId) {
     return normalizeLocation(extractRecord(response, ['location', 'data', 'store']) ?? {})
   } catch (error) {
     throw new Error(getErrorMessage(error, 'We could not load that location.'))
+  }
+}
+
+export async function fetchLocationAvailability(locationId) {
+  try {
+    const response = await apiFetch(`/locations/${encodeURIComponent(locationId)}/availability`)
+    return normalizeLocationAvailability(response)
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'We could not load pickup availability for this store right now.'))
   }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import BaseCard from '../components/BaseCard.vue'
@@ -11,8 +11,8 @@ import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMemberFavorites, fetchSessionMemberOrders, fetchSessionMemberPoints } from '../services/membersService'
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
-import { fetchNearbyLocations, fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
-import { createPickupOrder } from '../services/ordersService'
+import { fetchLocationAvailability, fetchNearbyLocations, fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
+import { createPickupOrder, previewPickupOrder, previewReorder } from '../services/ordersService'
 import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone } from '../utils/formatters'
 
 const router = useRouter()
@@ -34,6 +34,11 @@ const isSubmitting = ref(false)
 const favoriteError = ref('')
 const orderItemsLimited = ref(false)
 const scheduleMismatch = ref(false)
+const availabilityLoading = ref(false)
+const availabilityError = ref('')
+const previewLoading = ref(false)
+const previewError = ref('')
+const reorderLoading = ref(false)
 const selectedStoreId = ref('')
 const storeSearchTerm = ref('')
 const menuSearchTerm = ref('')
@@ -52,6 +57,10 @@ const explicitFavoriteIds = ref(new Set())
 const favoriteItems = ref([])
 const dashboardPointsHistory = ref([])
 const userCoordinates = ref(null)
+const storeAvailability = ref(null)
+const previewOrder = ref(null)
+let previewTimeoutId = null
+let previewRequestId = 0
 
 const pointsHistory = computed(() =>
   (dashboardPointsHistory.value.length ? dashboardPointsHistory.value : orders.value.slice(0, 6).map((order) => ({
@@ -183,6 +192,24 @@ const selectedLocation = computed(() =>
 const selectedLocationLabel = computed(() =>
   selectedLocation.value ? formatStoreOptionLabel(selectedLocation.value, locations.value) : '',
 )
+const effectiveStoreAvailability = computed(() => {
+  if (!selectedLocation.value) {
+    return null
+  }
+
+  return {
+    locationId: selectedLocation.value.id,
+    displayName: storeAvailability.value?.displayName || selectedLocationLabel.value,
+    orderingAvailable: storeAvailability.value?.orderingAvailable ?? selectedLocation.value.orderingAvailable,
+    openNow: storeAvailability.value?.openNow ?? selectedLocation.value.openNow ?? null,
+    acceptingOrdersNow: storeAvailability.value?.acceptingOrdersNow ?? null,
+    availabilityStatus: storeAvailability.value?.availabilityStatus ?? selectedLocation.value.availabilityStatus ?? '',
+    availabilityMessage: storeAvailability.value?.availabilityMessage || selectedLocation.value.availabilityMessage || '',
+    nextOpenAt: storeAvailability.value?.nextOpenAt ?? '',
+    nextCloseAt: storeAvailability.value?.nextCloseAt ?? '',
+    validPickupWindows: Array.isArray(storeAvailability.value?.validPickupWindows) ? storeAvailability.value.validPickupWindows : [],
+  }
+})
 const nearbyStores = computed(() =>
   (nearbyLocationSuggestions.value.length
     ? nearbyLocationSuggestions.value
@@ -203,6 +230,14 @@ const cartSubtotal = computed(() =>
 
 const estimatedTax = computed(() => Number((cartSubtotal.value * 0.07).toFixed(2)))
 const estimatedTotal = computed(() => Number((cartSubtotal.value + estimatedTax.value).toFixed(2)))
+const previewSubtotal = computed(() => previewOrder.value?.subtotal ?? cartSubtotal.value)
+const previewTax = computed(() => previewOrder.value?.tax ?? estimatedTax.value)
+const previewTotal = computed(() => previewOrder.value?.total ?? estimatedTotal.value)
+const previewPointsEarned = computed(() =>
+  previewOrder.value?.pointsEarned
+  ?? Math.floor(previewTotal.value || 0),
+)
+const previewWarnings = computed(() => previewOrder.value?.warnings ?? [])
 const availableMenuItemIds = computed(() =>
   new Set(
     menuItems.value
@@ -212,6 +247,29 @@ const availableMenuItemIds = computed(() =>
 )
 const unavailableCartItems = computed(() =>
   cart.value.filter((item) => !availableMenuItemIds.value.has(item.id)),
+)
+const canPlaceOrder = computed(() =>
+  Boolean(
+    selectedStoreId.value
+    && cart.value.length
+    && isStoreOrderable(selectedLocation.value)
+    && !pickupTimeError.value
+    && effectiveStoreAvailability.value?.acceptingOrdersNow !== false
+    && !previewLoading.value
+    && !previewError.value,
+  ),
+)
+const cartPreviewSignature = computed(() =>
+  JSON.stringify({
+    storeId: selectedStoreId.value,
+    pickupTime: pickupTime.value,
+    specialInstructions: specialInstructions.value.trim(),
+    items: cart.value.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      size: item.size || null,
+    })),
+  }),
 )
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -274,6 +332,40 @@ function serializePickupTime(value) {
   return parsed ? parsed.toISOString() : null
 }
 
+function formatPickupWindow(window) {
+  if (!window?.start || !window?.end) {
+    return ''
+  }
+
+  return `${formatDateTime(window.start)} - ${formatDateTime(window.end)}`
+}
+
+function buildOrderPayload() {
+  const payload = {
+    store_id: selectedStoreId.value,
+    items: cart.value.map((item) => ({
+      menu_item_id: item.id,
+      quantity: item.quantity,
+      size: item.size || null,
+    })),
+    payment_method: 'pay_in_store',
+    special_instructions: specialInstructions.value.trim() || null,
+  }
+
+  const serializedPickupTime = serializePickupTime(pickupTime.value)
+
+  if (serializedPickupTime) {
+    payload.pickup_time = serializedPickupTime
+  }
+
+  return payload
+}
+
+function clearPreviewState() {
+  previewOrder.value = null
+  previewError.value = ''
+}
+
 function resolveUserCoordinates() {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     return Promise.resolve(null)
@@ -311,6 +403,84 @@ async function loadNearbySuggestions() {
   } catch {
     nearbyLocationSuggestions.value = []
   }
+}
+
+async function loadStoreAvailability() {
+  if (!selectedStoreId.value) {
+    storeAvailability.value = null
+    availabilityError.value = ''
+    return
+  }
+
+  availabilityLoading.value = true
+  availabilityError.value = ''
+
+  try {
+    storeAvailability.value = await fetchLocationAvailability(selectedStoreId.value)
+  } catch (error) {
+    storeAvailability.value = null
+    availabilityError.value = error.message
+  } finally {
+    availabilityLoading.value = false
+  }
+}
+
+async function runOrderPreview(options = {}) {
+  const { immediate = false } = options
+
+  if (previewTimeoutId) {
+    clearTimeout(previewTimeoutId)
+    previewTimeoutId = null
+  }
+
+  if (
+    !selectedStoreId.value
+    || !cart.value.length
+    || pickupTimeError.value
+    || !isStoreOrderable(selectedLocation.value)
+    || effectiveStoreAvailability.value?.acceptingOrdersNow === false
+  ) {
+    clearPreviewState()
+    return null
+  }
+
+  const requestId = ++previewRequestId
+
+  const execute = async () => {
+    previewLoading.value = true
+    previewError.value = ''
+
+    try {
+      const preview = await previewPickupOrder(buildOrderPayload())
+
+      if (requestId !== previewRequestId) {
+        return null
+      }
+
+      previewOrder.value = preview
+      previewError.value = ''
+      return preview
+    } catch (error) {
+      if (requestId !== previewRequestId) {
+        return null
+      }
+
+      previewOrder.value = null
+      previewError.value = error.message
+      return null
+    } finally {
+      if (requestId === previewRequestId) {
+        previewLoading.value = false
+      }
+    }
+  }
+
+  if (immediate) {
+    return execute()
+  }
+
+  previewTimeoutId = setTimeout(execute, 250)
+  return null
 }
 
 function clearPickupTime() {
@@ -704,23 +874,47 @@ function addToCart(item) {
 async function addOrderToCart(order) {
   submitError.value = ''
   submitSuccess.value = null
+  reorderLoading.value = true
 
-  if (order.storeId && order.storeId !== selectedStoreId.value) {
-    selectedStoreId.value = order.storeId
-    await refreshMenuForSelectedStore()
-  }
+  try {
+    const preview = await previewReorder(order.id, {
+      payment_method: 'pay_in_store',
+      special_instructions: order.specialInstructions || null,
+    })
 
-  order.items.forEach((item) => {
-    addToCart({
+    if (preview.storeId && preview.storeId !== selectedStoreId.value) {
+      selectedStoreId.value = preview.storeId
+      await refreshMenuForSelectedStore()
+    }
+
+    cart.value = preview.items.map((item) => ({
+      key: `${item.menuItemId}-${item.size || 'default'}`,
       id: item.menuItemId,
       name: item.name,
       size: item.size,
       category: '',
       price: item.unitPrice || item.price,
+      quantity: item.quantity,
+    }))
+    specialInstructions.value = preview.specialInstructions || ''
+    pickupTime.value = ''
+    previewOrder.value = preview
+    activePanel.value = 'builder'
+  } catch (error) {
+    order.items.forEach((item) => {
+      addToCart({
+        id: item.menuItemId,
+        name: item.name,
+        size: item.size,
+        category: '',
+        price: item.unitPrice || item.price,
+      })
     })
-  })
-
-  activePanel.value = 'builder'
+    submitError.value = error.message
+    activePanel.value = 'builder'
+  } finally {
+    reorderLoading.value = false
+  }
 }
 
 function updateQuantity(key, nextQuantity) {
@@ -827,7 +1021,10 @@ async function loadBuilderData() {
 
     await chooseDefaultStore(locationResult)
 
-    const menuResult = await fetchMenuForStore(selectedStoreId.value)
+    const [menuResult] = await Promise.all([
+      fetchMenuForStore(selectedStoreId.value),
+      loadStoreAvailability(),
+    ])
     applyMenuItems(menuResult)
   } catch (error) {
     builderError.value = error.message
@@ -854,7 +1051,10 @@ async function refreshMenuForSelectedStore() {
   favoriteError.value = ''
 
   try {
-    const menuResult = await fetchMenuForStore(selectedStoreId.value)
+    const [menuResult] = await Promise.all([
+      fetchMenuForStore(selectedStoreId.value),
+      loadStoreAvailability(),
+    ])
     applyMenuItems(menuResult)
     const favorites = await fetchSessionMemberFavorites({ limit: 50, storeId: selectedStoreId.value || undefined })
     favoriteItems.value = favorites
@@ -885,6 +1085,11 @@ async function submitOrder() {
     return
   }
 
+  if (effectiveStoreAvailability.value?.acceptingOrdersNow === false) {
+    submitError.value = effectiveStoreAvailability.value.availabilityMessage || 'This store is not accepting pickup orders right now.'
+    return
+  }
+
   if (!cart.value.length) {
     submitError.value = 'Add at least one menu item to your order.'
     return
@@ -903,29 +1108,21 @@ async function submitOrder() {
   isSubmitting.value = true
 
   try {
-    const payload = {
-      store_id: selectedStoreId.value,
-      items: cart.value.map((item) => ({
-        menu_item_id: item.id,
-        quantity: item.quantity,
-        size: item.size || null,
-      })),
-      payment_method: 'pay_in_store',
-      special_instructions: specialInstructions.value.trim() || null,
+    const preview = await runOrderPreview({ immediate: true })
+
+    if (!preview) {
+      submitError.value = previewError.value || 'Review your pickup order before placing it.'
+      return
     }
 
-    const serializedPickupTime = serializePickupTime(pickupTime.value)
-
-    if (serializedPickupTime) {
-      payload.pickup_time = serializedPickupTime
-    }
-
+    const payload = buildOrderPayload()
     const createdOrder = await createPickupOrder(payload)
 
     submitSuccess.value = createdOrder
     cart.value = []
     pickupTime.value = ''
     specialInstructions.value = ''
+    clearPreviewState()
     activePanel.value = 'history'
     await Promise.all([loadOrders(), loadPoints()])
     if (createdOrder?.id || createdOrder?.order_id) {
@@ -952,6 +1149,23 @@ onMounted(() => {
 
 watch([pickupTime, selectedStoreId], () => {
   scheduleMismatch.value = false
+  submitError.value = ''
+})
+
+watch(cartPreviewSignature, () => {
+  runOrderPreview()
+})
+
+watch(selectedStoreId, () => {
+  if (!selectedStoreId.value) {
+    storeAvailability.value = null
+  }
+})
+
+onBeforeUnmount(() => {
+  if (previewTimeoutId) {
+    clearTimeout(previewTimeoutId)
+  }
 })
 </script>
 
@@ -985,8 +1199,8 @@ watch([pickupTime, selectedStoreId], () => {
               <span>previous orders in your Coffee Club history</span>
             </div>
             <div class="favorite-link">
-              <strong>{{ formatCurrency(estimatedTotal) }}</strong>
-              <span>estimated total for this pickup order</span>
+              <strong>{{ formatCurrency(previewTotal) }}</strong>
+              <span>{{ previewOrder ? 'live total from backend preview' : 'estimated total for this pickup order' }}</span>
             </div>
           </div>
         </BaseCard>
@@ -1059,6 +1273,46 @@ watch([pickupTime, selectedStoreId], () => {
               <span v-if="selectedLocation.address || selectedLocation.fullAddress">{{ selectedLocation.address || selectedLocation.fullAddress }}</span>
               <span v-if="selectedLocation.phone">Phone: {{ formatPhone(selectedLocation.phone) }}</span>
               <span v-if="selectedLocation.hoursTodayLabel">Today: {{ selectedLocation.hoursTodayLabel }}</span>
+              <div v-if="availabilityLoading" class="helper-text helper-text--compact">Checking live pickup availability…</div>
+              <template v-else-if="effectiveStoreAvailability">
+                <span class="helper-text helper-text--compact">
+                  <strong v-if="effectiveStoreAvailability.acceptingOrdersNow">Open now for pickup.</strong>
+                  <strong v-else-if="effectiveStoreAvailability.openNow === false">Closed right now.</strong>
+                  <strong v-else>Pickup availability is being updated.</strong>
+                  <template v-if="effectiveStoreAvailability.nextCloseAt">
+                    Closes at {{ formatDateTime(effectiveStoreAvailability.nextCloseAt) }}.
+                  </template>
+                  <template v-else-if="effectiveStoreAvailability.nextOpenAt">
+                    Next opens at {{ formatDateTime(effectiveStoreAvailability.nextOpenAt) }}.
+                  </template>
+                </span>
+                <span
+                  v-if="effectiveStoreAvailability.availabilityMessage"
+                  :class="[
+                    'helper-text',
+                    'helper-text--compact',
+                    effectiveStoreAvailability.acceptingOrdersNow === false ? 'helper-text--warning' : '',
+                  ]"
+                >
+                  {{ effectiveStoreAvailability.availabilityMessage }}
+                </span>
+                <div
+                  v-if="effectiveStoreAvailability.validPickupWindows?.length"
+                  class="pickup-window-list"
+                >
+                  <span class="input-label">Valid pickup windows</span>
+                  <div class="pickup-window-list__items">
+                    <span
+                      v-for="window in effectiveStoreAvailability.validPickupWindows.slice(0, 3)"
+                      :key="`${window.start}-${window.end}`"
+                      class="pickup-window-chip"
+                    >
+                      {{ formatPickupWindow(window) }}
+                    </span>
+                  </div>
+                </div>
+              </template>
+              <span v-if="availabilityError" class="helper-text helper-text--warning">{{ availabilityError }}</span>
               <span
                 v-if="!isStoreOrderable(selectedLocation) && selectedLocation.availabilityMessage"
                 class="helper-text helper-text--warning"
@@ -1124,21 +1378,46 @@ watch([pickupTime, selectedStoreId], () => {
               <p v-if="scheduleMismatch" class="helper-text helper-text--warning">
                 The backend reported a different pickup schedule than the location feed. Try another time or store while that sync issue gets corrected.
               </p>
+              <div v-if="previewLoading" class="helper-text helper-text--compact">Updating your live order preview…</div>
+              <p v-else-if="previewError" class="helper-text helper-text--warning">{{ previewError }}</p>
+              <div v-else-if="previewWarnings.length" class="pickup-preview-notes">
+                <p
+                  v-for="warning in previewWarnings"
+                  :key="warning"
+                  class="helper-text helper-text--warning"
+                >
+                  {{ warning }}
+                </p>
+              </div>
+              <div v-if="previewOrder" class="pickup-preview">
+                <div class="hours-row">
+                  <span>Expected points</span>
+                  <strong>{{ previewPointsEarned }}</strong>
+                </div>
+                <div v-if="previewOrder.readyByEstimate" class="hours-row">
+                  <span>Ready by</span>
+                  <strong>{{ formatDateTime(previewOrder.readyByEstimate) }}</strong>
+                </div>
+                <div v-if="previewOrder.orderStatus" class="hours-row">
+                  <span>Status</span>
+                  <strong>{{ formatOrderStatus(previewOrder.orderStatus) }}</strong>
+                </div>
+              </div>
               <div class="hours-row">
                 <span>Items</span>
                 <strong>{{ cartItemCount }}</strong>
               </div>
               <div class="hours-row">
                 <span>Subtotal</span>
-                <strong>{{ formatCurrency(cartSubtotal) }}</strong>
+                <strong>{{ formatCurrency(previewSubtotal) }}</strong>
               </div>
               <div class="hours-row">
                 <span>Estimated tax</span>
-                <strong>{{ formatCurrency(estimatedTax) }}</strong>
+                <strong>{{ formatCurrency(previewTax) }}</strong>
               </div>
               <div class="hours-row">
                 <span>Estimated total</span>
-                <strong>{{ formatCurrency(estimatedTotal) }}</strong>
+                <strong>{{ formatCurrency(previewTotal) }}</strong>
               </div>
             </div>
 
@@ -1178,7 +1457,7 @@ watch([pickupTime, selectedStoreId], () => {
 
             <p v-if="submitError" class="helper-text helper-text--error">{{ submitError }}</p>
 
-            <BaseButton :disabled="isSubmitting || !cart.length || !selectedStoreId || !isStoreOrderable(selectedLocation)" block @click="submitOrder">
+            <BaseButton :disabled="isSubmitting || !canPlaceOrder || reorderLoading" block @click="submitOrder">
               {{ isSubmitting ? 'Placing Order...' : 'Place Pickup Order' }}
             </BaseButton>
           </div>

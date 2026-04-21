@@ -5,11 +5,12 @@ import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
-import { fetchLocation, isStoreOrderable } from '../services/locationsService'
-import { dedupeLabels, formatCityStatePostal, formatDate, formatHoursRange, formatPhone, formatServiceLabel, formatStoreLabel } from '../utils/formatters'
+import { fetchLocation, fetchLocationAvailability, isStoreOrderable } from '../services/locationsService'
+import { dedupeLabels, formatCityStatePostal, formatDate, formatDateTime, formatHoursRange, formatPhone, formatServiceLabel, formatStoreLabel } from '../utils/formatters'
 
 const route = useRoute()
 const location = ref(null)
+const availability = ref(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
 
@@ -87,10 +88,16 @@ async function loadLocation() {
   errorMessage.value = ''
 
   try {
-    location.value = await fetchLocation(locationId.value)
+    const [locationResult, availabilityResult] = await Promise.all([
+      fetchLocation(locationId.value),
+      fetchLocationAvailability(locationId.value).catch(() => null),
+    ])
+    location.value = locationResult
+    availability.value = availabilityResult
   } catch (error) {
     errorMessage.value = error.message
     location.value = null
+    availability.value = null
   } finally {
     isLoading.value = false
   }
@@ -135,9 +142,13 @@ onMounted(loadLocation)
             <span class="badge">{{ location.state }}</span>
             <span
               class="status-pill"
-              :class="{ 'status-pill--open': location.openNow, 'status-pill--closed': location.openNow === false }"
+              :class="{ 'status-pill--open': availability?.acceptingOrdersNow ?? location.openNow, 'status-pill--closed': (availability?.acceptingOrdersNow ?? location.openNow) === false }"
             >
-              {{ location.openNow === null ? 'Status unavailable' : location.openNow ? 'Open now' : 'Closed now' }}
+              {{
+                availability?.acceptingOrdersNow === null || availability?.acceptingOrdersNow === undefined
+                  ? (location.openNow === null ? 'Status unavailable' : location.openNow ? 'Open now' : 'Closed now')
+                  : availability.acceptingOrdersNow ? 'Accepting pickup orders' : 'Pickup currently unavailable'
+              }}
             </span>
           </div>
 
@@ -162,13 +173,21 @@ onMounted(loadLocation)
           </div>
 
           <p
-            v-if="!isStoreOrderable(location) && location.availabilityMessage"
-            class="helper-text helper-text--warning"
+            v-if="availability?.availabilityMessage || (!isStoreOrderable(location) && location.availabilityMessage)"
+            :class="['helper-text', (availability?.acceptingOrdersNow === false || !isStoreOrderable(location)) ? 'helper-text--warning' : '']"
           >
-            {{ location.availabilityMessage }}
+            {{ availability?.availabilityMessage || location.availabilityMessage }}
           </p>
 
-          <div v-if="isStoreOrderable(location)" class="detail-cta-row">
+          <p v-if="availability?.nextCloseAt" class="helper-text helper-text--compact">
+            Next closes at {{ formatDateTime(availability.nextCloseAt) }}.
+          </p>
+
+          <p v-else-if="availability?.nextOpenAt" class="helper-text helper-text--compact">
+            Next opens at {{ formatDateTime(availability.nextOpenAt) }}.
+          </p>
+
+          <div v-if="isStoreOrderable(location) && availability?.acceptingOrdersNow !== false" class="detail-cta-row">
             <RouterLink :to="{ name: 'orders' }">
               <BaseButton variant="secondary">Start pickup order</BaseButton>
             </RouterLink>
