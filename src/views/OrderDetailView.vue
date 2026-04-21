@@ -60,7 +60,7 @@ onMounted(loadOrder)
       />
 
       <div v-else-if="order" class="detail-layout">
-        <BaseCard class="detail-hero-card" padding="lg">
+        <BaseCard class="detail-hero-card panel-card panel-card--soft" padding="lg">
           <div class="detail-brand-row">
             <img :src="logoIcon" alt="Uncle Joe's Coffee" class="detail-brand-row__logo" />
             <div>
@@ -76,7 +76,7 @@ onMounted(loadOrder)
           <h1>{{ formatStoreLabel(order.locationName, order.city, order.state) }}</h1>
           <p class="detail-lead">{{ order.pickupTime ? `Pickup around ${formatDateTime(order.pickupTime)}` : `Ordered ${formatDateTime(order.date)}` }}</p>
 
-          <div class="favorite-link order-callout">
+          <div class="favorite-link order-callout order-callout--receipt">
             <strong>
               {{ order.readyByEstimate ? `Ready by ${formatDateTime(order.readyByEstimate)}` : formatOrderStatus(order.orderStatus) }}
             </strong>
@@ -134,7 +134,7 @@ onMounted(loadOrder)
         </BaseCard>
 
         <div class="detail-sidebar">
-          <BaseCard padding="lg">
+          <BaseCard class="panel-card panel-card--flat" padding="lg">
             <p class="eyebrow">Items</p>
             <h2>Receipt breakdown</h2>
             <div v-if="order.items.length" class="orders-stack">
@@ -149,7 +149,7 @@ onMounted(loadOrder)
             <p v-else class="detail-lead">No line items are available for this order.</p>
           </BaseCard>
 
-          <BaseCard v-if="order.paymentSummary" padding="lg">
+          <BaseCard v-if="order.paymentSummary" class="panel-card panel-card--flat" padding="lg">
             <p class="eyebrow">Payment</p>
             <h2>Summary</h2>
             <div class="detail-stack">

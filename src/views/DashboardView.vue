@@ -214,7 +214,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="section">
+  <section class="section section--catalog">
     <div class="container dashboard-stack">
       <div class="section-heading section-heading--left">
         <span class="eyebrow">Coffee Club</span>
@@ -231,7 +231,7 @@ onMounted(() => {
           @retry="loadRewardsPanels"
         />
 
-        <BaseCard class="member-card" padding="lg">
+        <BaseCard class="member-card panel-card panel-card--soft" padding="lg">
           <div class="detail-brand-row detail-brand-row--compact">
             <img :src="logoIcon" alt="Uncle Joe's Coffee" class="detail-brand-row__logo" />
             <div>
@@ -280,7 +280,7 @@ onMounted(() => {
       </div>
 
       <div class="dashboard-hero-grid">
-        <BaseCard v-if="preferredStore" class="member-card" padding="lg">
+        <BaseCard v-if="preferredStore" class="member-card panel-card panel-card--soft" padding="lg">
           <p class="eyebrow">Preferred Store</p>
           <h2>
             {{
@@ -295,7 +295,7 @@ onMounted(() => {
           </div>
         </BaseCard>
 
-        <BaseCard v-if="favoritesLoading || favoritesError || favorites.length" padding="lg">
+        <BaseCard v-if="favoritesLoading || favoritesError || favorites.length" class="panel-card panel-card--soft" padding="lg">
           <p class="eyebrow">Favorites</p>
           <h2>Your go-to orders</h2>
 
@@ -328,7 +328,7 @@ onMounted(() => {
       </div>
 
       <div class="dashboard-hero-grid">
-        <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--flat" padding="lg">
           <div class="card-topline">
             <div>
               <p class="eyebrow">Rewards Activity</p>
@@ -382,7 +382,7 @@ onMounted(() => {
           />
         </BaseCard>
 
-        <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--flat" padding="lg">
           <p class="eyebrow">How Rewards Work</p>
           <h2>Program details</h2>
 
@@ -422,7 +422,7 @@ onMounted(() => {
       </div>
 
       <div class="dashboard-hero-grid">
-        <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--flat" padding="lg">
           <p class="eyebrow">Recent Rewards</p>
           <h2>Points activity</h2>
 
@@ -463,7 +463,7 @@ onMounted(() => {
           />
         </BaseCard>
 
-        <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--flat" padding="lg">
           <p class="eyebrow">Redemptions</p>
           <h2>Used rewards</h2>
 

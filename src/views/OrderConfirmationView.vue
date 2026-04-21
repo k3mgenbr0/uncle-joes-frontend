@@ -60,7 +60,7 @@ onMounted(loadOrder)
       />
 
       <div v-else-if="order" class="detail-layout">
-        <BaseCard class="detail-hero-card" padding="lg">
+        <BaseCard class="detail-hero-card panel-card panel-card--soft" padding="lg">
           <div class="detail-brand-row">
             <img :src="logoIcon" alt="Uncle Joe's Coffee" class="detail-brand-row__logo" />
             <div>
@@ -81,7 +81,7 @@ onMounted(loadOrder)
             {{ order.pickupTime ? `Pickup around ${formatDateTime(order.pickupTime)}` : `Starting now • ordered ${formatDateTime(order.date)}` }}
           </p>
 
-          <div class="favorite-link order-callout">
+          <div class="favorite-link order-callout order-callout--receipt">
             <strong>
               {{ order.readyByEstimate ? `Ready by ${formatDateTime(order.readyByEstimate)}` : 'Your order is being prepared' }}
             </strong>
@@ -135,7 +135,7 @@ onMounted(loadOrder)
           </div>
         </BaseCard>
 
-        <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--flat" padding="lg">
           <p class="eyebrow">What You Ordered</p>
           <h2>Pickup summary</h2>
 

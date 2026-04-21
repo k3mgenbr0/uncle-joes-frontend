@@ -18,7 +18,8 @@ defineProps({
 <template>
   <div :class="['state-card', { 'state-card--compact': compact }]">
     <div class="spinner" aria-hidden="true"></div>
-    <div>
+    <div class="state-card__content">
+      <span class="state-card__eyebrow">Loading</span>
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>
     </div>

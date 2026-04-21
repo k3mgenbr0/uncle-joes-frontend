@@ -32,7 +32,7 @@ const emit = defineEmits(['retry'])
 </script>
 
 <template>
-  <BaseCard padding="lg">
+  <BaseCard class="panel-card panel-card--history" padding="lg">
     <div class="section-heading section-heading--left section-heading--compact">
       <span class="eyebrow">{{ eyebrow }}</span>
       <h2>{{ title }}</h2>

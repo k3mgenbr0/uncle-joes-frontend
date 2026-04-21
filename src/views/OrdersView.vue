@@ -855,7 +855,7 @@ watch([pickupTime, selectedStoreId], () => {
 </script>
 
 <template>
-  <section class="section">
+  <section class="section section--catalog">
     <div class="container dashboard-stack">
       <div class="section-heading section-heading--left section-heading--wide">
         <span class="eyebrow">Pickup Ordering</span>
@@ -871,7 +871,7 @@ watch([pickupTime, selectedStoreId], () => {
           @retry="loadPoints"
         />
 
-        <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--soft" padding="lg">
           <p class="eyebrow">Quick View</p>
           <h2>Order at a glance</h2>
           <div class="orders-overview-grid">
@@ -909,7 +909,7 @@ watch([pickupTime, selectedStoreId], () => {
       </div>
 
       <div v-if="activePanel === 'builder'" class="order-builder-layout order-builder-layout--sticky">
-        <BaseCard padding="lg" class="order-builder-sidebar">
+        <BaseCard padding="lg" class="order-builder-sidebar panel-card panel-card--soft">
           <div class="section-heading section-heading--left section-heading--compact">
             <span class="eyebrow">Pickup Setup</span>
             <h2>Store and cart</h2>
@@ -1066,7 +1066,7 @@ watch([pickupTime, selectedStoreId], () => {
         </BaseCard>
 
         <div class="orders-builder-main">
-          <BaseCard padding="lg">
+          <BaseCard class="panel-card panel-card--flat" padding="lg">
             <div class="section-heading section-heading--left section-heading--compact">
               <span class="eyebrow">Menu Browser</span>
               <h2>Add drinks and cafe favorites</h2>
@@ -1203,7 +1203,7 @@ watch([pickupTime, selectedStoreId], () => {
 
       <div v-else class="dashboard-stack">
         <div class="dashboard-hero-grid">
-          <BaseCard padding="lg">
+        <BaseCard class="panel-card panel-card--flat" padding="lg">
             <p class="eyebrow">History Filters</p>
             <h2>Find a previous order faster</h2>
             <div class="filters-grid filters-grid--three">

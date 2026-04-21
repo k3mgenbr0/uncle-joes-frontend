@@ -25,7 +25,8 @@ const emit = defineEmits(['action'])
 
 <template>
   <div :class="['state-card state-card--error', { 'state-card--compact': compact }]">
-    <div>
+    <div class="state-card__content">
+      <span class="state-card__eyebrow">Needs attention</span>
       <h3>{{ title }}</h3>
       <p>{{ message }}</p>
       <BaseButton v-if="actionLabel" variant="secondary" @click="emit('action')">

@@ -13,7 +13,8 @@ defineProps({
 
 <template>
   <div class="state-card state-card--empty">
-    <div>
+    <div class="state-card__content">
+      <span class="state-card__eyebrow">Nothing here yet</span>
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>
     </div>

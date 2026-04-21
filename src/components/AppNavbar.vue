@@ -76,7 +76,7 @@ async function handleLogout() {
           class="nav-link nav-link--button"
           @click="closeMenu"
         >
-          <BaseButton size="sm">Login</BaseButton>
+          <BaseButton size="sm" variant="secondary">Login</BaseButton>
         </RouterLink>
 
         <BaseButton

@@ -23,6 +23,12 @@ const benefits = [
     description: 'Find the nearest Uncle Joe\'s location and discover the hours before you head out.',
   },
 ]
+
+const heroStats = [
+  'Handcrafted classics and seasonal favorites',
+  'Neighborhood pickup designed around regulars',
+  'Coffee Club rewards that stay simple and useful',
+]
 </script>
 
 <template>
@@ -49,6 +55,13 @@ const benefits = [
             and keep your Coffee Club perks close at hand.
           </p>
 
+          <div class="hero-copy__details">
+            <span class="hero-copy__rule"></span>
+            <ul class="hero-copy__list">
+              <li v-for="stat in heroStats" :key="stat">{{ stat }}</li>
+            </ul>
+          </div>
+
           <div class="hero-actions">
             <RouterLink to="/menu">
               <BaseButton>Browse Menu</BaseButton>
@@ -64,10 +77,7 @@ const benefits = [
 
         <div class="hero-showcase">
           <BaseCard class="hero-feature-card" padding="lg">
-            <div class="hero-feature-card__badge">
-              <img :src="logoIcon" alt="" class="hero-feature-card__icon" />
-              <span>Coffee Club</span>
-            </div>
+            <span class="eyebrow hero-feature-card__eyebrow">Coffee Club</span>
             <h2>Rewards that feel like your regular order knows your name.</h2>
             <p>
               Sign in to view your points balance, revisit your recent orders, and stay connected to the Uncle Joe's experience.
@@ -78,17 +88,6 @@ const benefits = [
               <li>Fresh menu browsing on any device</li>
             </ul>
           </BaseCard>
-
-          <div class="hero-floating-notes" aria-hidden="true">
-            <div class="hero-note">
-              <span class="hero-note__label">Neighborhood first</span>
-              <strong>Fresh pickup, easy rewards</strong>
-            </div>
-            <div class="hero-note hero-note--warm">
-              <span class="hero-note__label">Daily ritual</span>
-              <strong>Good coffee. Good people.</strong>
-            </div>
-          </div>
         </div>
       </div>
     </section>
