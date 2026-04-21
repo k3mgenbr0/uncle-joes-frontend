@@ -168,9 +168,11 @@ onMounted(loadLocation)
             {{ location.availabilityMessage }}
           </p>
 
-          <RouterLink v-if="isStoreOrderable(location)" :to="{ name: 'orders' }">
-            <BaseButton variant="secondary">Start pickup order</BaseButton>
-          </RouterLink>
+          <div v-if="isStoreOrderable(location)" class="detail-cta-row">
+            <RouterLink :to="{ name: 'orders' }">
+              <BaseButton variant="secondary">Start pickup order</BaseButton>
+            </RouterLink>
+          </div>
         </BaseCard>
 
         <BaseCard v-if="weeklyHours.length" padding="lg">

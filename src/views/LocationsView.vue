@@ -13,11 +13,16 @@ const locations = ref([])
 const searchTerm = ref('')
 const selectedState = ref('All')
 const selectedCity = ref('All')
+const selectedRegion = ref('All')
+const selectedAmenity = ref('All')
+const selectedOpenNow = ref('All')
 const selectedAvailability = ref('All')
 const isLoading = ref(true)
 const errorMessage = ref('')
 
 const states = computed(() => ['All', ...Array.from(new Set(locations.value.map((location) => location.state).filter(Boolean))).sort()])
+const regions = computed(() => ['All', ...Array.from(new Set(locations.value.map((location) => location.region).filter(Boolean))).sort()])
+const amenities = computed(() => ['All', 'Wi-Fi', 'Drive-Thru', 'DoorDash', 'Pickup', 'Dine-In'])
 
 const cities = computed(() => {
   const pool = selectedState.value === 'All'
@@ -34,10 +39,20 @@ const filteredLocations = computed(() => {
     (selectedAvailability.value === 'All'
       || (selectedAvailability.value === 'Open for Ordering' && isStoreOrderable(location))
       || (selectedAvailability.value === 'Coming Soon' && !isStoreOrderable(location))) &&
+    (selectedRegion.value === 'All' || location.region === selectedRegion.value) &&
     (selectedState.value === 'All' || location.state === selectedState.value) &&
     (selectedCity.value === 'All' || location.city === selectedCity.value) &&
+    (selectedOpenNow.value === 'All'
+      || (selectedOpenNow.value === 'Open Now' && location.openNow === true)
+      || (selectedOpenNow.value === 'Closed Now' && location.openNow === false)) &&
+    (selectedAmenity.value === 'All'
+      || (selectedAmenity.value === 'Wi-Fi' && location.wifi)
+      || (selectedAmenity.value === 'Drive-Thru' && location.driveThru)
+      || (selectedAmenity.value === 'DoorDash' && location.doorDash)
+      || (selectedAmenity.value === 'Pickup' && location.pickupSupported)
+      || (selectedAmenity.value === 'Dine-In' && location.dineInSupported)) &&
     (!query ||
-      [location.city, location.state, location.address, location.name, location.storeName]
+      [location.city, location.state, location.region, location.metroArea, location.address, location.name, location.storeName, location.displayName]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query))),
   )
@@ -45,8 +60,11 @@ const filteredLocations = computed(() => {
 
 function resetFilters() {
   searchTerm.value = ''
+  selectedRegion.value = 'All'
   selectedState.value = 'All'
   selectedCity.value = 'All'
+  selectedAmenity.value = 'All'
+  selectedOpenNow.value = 'All'
   selectedAvailability.value = 'All'
 }
 
@@ -82,12 +100,19 @@ onMounted(loadLocations)
       </div>
 
       <BaseCard class="filters-card" padding="lg">
-        <div class="filters-grid filters-grid--three">
+        <div class="filters-grid filters-grid--four">
           <BaseInput
             v-model="searchTerm"
             label="Search locations"
-            placeholder="Search by city, state, or address"
+            placeholder="Search by city, region, or address"
           />
+
+          <label class="input-group">
+            <span class="input-label">Region</span>
+            <select v-model="selectedRegion" class="base-input base-select">
+              <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
+            </select>
+          </label>
 
           <label class="input-group">
             <span class="input-label">State</span>
@@ -109,6 +134,22 @@ onMounted(loadLocations)
               <option value="All">All</option>
               <option value="Open for Ordering">Open for Ordering</option>
               <option value="Coming Soon">Coming Soon</option>
+            </select>
+          </label>
+
+          <label class="input-group">
+            <span class="input-label">Open Now</span>
+            <select v-model="selectedOpenNow" class="base-input base-select">
+              <option value="All">All</option>
+              <option value="Open Now">Open Now</option>
+              <option value="Closed Now">Closed Now</option>
+            </select>
+          </label>
+
+          <label class="input-group">
+            <span class="input-label">Amenity</span>
+            <select v-model="selectedAmenity" class="base-input base-select">
+              <option v-for="amenity in amenities" :key="amenity" :value="amenity">{{ amenity }}</option>
             </select>
           </label>
         </div>

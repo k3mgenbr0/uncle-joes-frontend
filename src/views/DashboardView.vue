@@ -33,6 +33,7 @@ const rewardsProgram = ref(null)
 const pointsHistory = ref([])
 const redemptions = ref([])
 const redemptionTrackingEnabled = ref(false)
+const historyRange = ref('90')
 
 const memberRecord = computed(() => dashboardMember.value ?? authStore.currentUser ?? null)
 const preferredStore = computed(() => memberRecord.value?.preferredStore ?? null)
@@ -47,8 +48,23 @@ const rewardProgressPercent = computed(() => {
 
   return Math.max(0, Math.min(100, (progress / threshold) * 100))
 })
+const filteredPointsHistory = computed(() => {
+  if (historyRange.value === 'all') {
+    return pointsHistory.value
+  }
+
+  const days = Number(historyRange.value)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+
+  return pointsHistory.value.filter((entry) => {
+    const parsed = new Date(entry.date)
+    return !Number.isNaN(parsed.getTime()) && parsed >= cutoff
+  })
+})
+
 const recentPointsBars = computed(() => {
-  const entries = pointsHistory.value.slice(-6)
+  const entries = filteredPointsHistory.value.slice(-6)
   const maxPoints = Math.max(...entries.map((entry) => entry.pointsEarned || 0), 1)
 
   return entries.map((entry) => ({
@@ -268,8 +284,20 @@ onMounted(() => {
 
       <div class="dashboard-hero-grid">
         <BaseCard padding="lg">
-          <p class="eyebrow">Rewards Activity</p>
-          <h2>Points earned by order</h2>
+          <div class="card-topline">
+            <div>
+              <p class="eyebrow">Rewards Activity</p>
+              <h2>Points earned by order</h2>
+            </div>
+            <label class="input-group rewards-range-control">
+              <span class="input-label">Range</span>
+              <select v-model="historyRange" class="base-input base-select">
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="all">All recent</option>
+              </select>
+            </label>
+          </div>
 
           <LoadingState
             v-if="activityLoading"
@@ -336,6 +364,12 @@ onMounted(() => {
                 <span>{{ threshold.points_required }} points required</span>
               </div>
             </div>
+            <div v-if="activeBonusPrograms.length" class="favorites-list">
+              <div v-for="program in activeBonusPrograms" :key="program.id || program.title" class="favorite-link">
+                <strong>{{ program.title || program.name }}</strong>
+                <span>{{ program.description || 'Bonus earning opportunity available.' }}</span>
+              </div>
+            </div>
             <p v-if="rewardsSummary?.nextTierName" class="helper-text helper-text--compact">
               {{ rewardsSummary.pointsToNextReward }} points until {{ formatTitleCase(rewardsSummary.nextTierName) }}.
             </p>
@@ -362,8 +396,8 @@ onMounted(() => {
             action-label="Try Again"
             @action="loadRewardsPanels"
           />
-          <div v-else-if="pointsHistory.length" class="favorites-list">
-            <div v-for="entry in pointsHistory.slice(0, 6)" :key="entry.id" class="favorite-link">
+          <div v-else-if="filteredPointsHistory.length" class="favorites-list">
+            <div v-for="entry in filteredPointsHistory.slice(0, 6)" :key="entry.id" class="favorite-link">
               <strong>{{ formatDate(entry.date) }}</strong>
               <span>
                 {{
@@ -371,6 +405,7 @@ onMounted(() => {
                     entry.storeName || [entry.storeCity, entry.storeState].filter(Boolean).join(', '),
                     `${entry.pointsEarned} pts`,
                     formatCurrency(entry.orderTotal),
+                    entry.activityType ? formatTitleCase(entry.activityType.replace(/_/g, ' ')) : '',
                   ].filter(Boolean).join(' • ')
                 }}
               </span>

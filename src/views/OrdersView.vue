@@ -38,6 +38,8 @@ const selectedStoreId = ref('')
 const storeSearchTerm = ref('')
 const menuSearchTerm = ref('')
 const selectedCategory = ref('All')
+const favoritesOnly = ref(false)
+const availableOnly = ref(true)
 const selectedVariantByGroup = ref({})
 const pickupTime = ref('')
 const specialInstructions = ref('')
@@ -67,7 +69,9 @@ const categories = computed(() => [
 
 const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
 const favoriteGroups = computed(() =>
-  favoriteItems.value.map((favorite) => {
+  favoriteItems.value
+    .filter((favorite) => favorite.isExplicit)
+    .map((favorite) => {
     const matchingGroup = groupedMenuItems.value.find((group) =>
       group.variants.some((variant) => variant.id === favorite.menuItemId),
     )
@@ -122,7 +126,9 @@ const filteredMenuItems = computed(() =>
   groupedMenuItems.value.filter((item) => {
     const matchesCategory = selectedCategory.value === 'All' || item.category === selectedCategory.value
     const matchesSearch = !menuSearchTerm.value.trim() || item.name.toLowerCase().includes(menuSearchTerm.value.trim().toLowerCase())
-    return matchesCategory && matchesSearch
+    const matchesFavorites = !favoritesOnly.value || isFavorite(item)
+    const matchesAvailability = !availableOnly.value || item.variants.some((variant) => variant.availableAtStore !== false)
+    return matchesCategory && matchesSearch && matchesFavorites && matchesAvailability
   }),
 )
 
@@ -642,6 +648,13 @@ function clearOrderFilters() {
   visibleOrderCount.value = 6
 }
 
+function clearMenuFilters() {
+  menuSearchTerm.value = ''
+  selectedCategory.value = 'All'
+  favoritesOnly.value = false
+  availableOnly.value = true
+}
+
 function showAllOrders() {
   visibleOrderCount.value = filteredOrders.value.length
 }
@@ -1101,6 +1114,17 @@ watch([pickupTime, selectedStoreId], () => {
                   </option>
                 </select>
               </label>
+            </div>
+            <div class="filters-inline">
+              <label class="filter-chip-toggle">
+                <input v-model="favoritesOnly" type="checkbox" />
+                <span>Favorites only</span>
+              </label>
+              <label class="filter-chip-toggle">
+                <input v-model="availableOnly" type="checkbox" />
+                <span>Available at this store</span>
+              </label>
+              <BaseButton size="sm" variant="ghost" @click="clearMenuFilters">Clear menu filters</BaseButton>
             </div>
 
             <div v-if="!builderLoading && !builderError && filteredMenuItems.length" class="order-menu-grid">

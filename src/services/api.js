@@ -11,6 +11,41 @@ class ApiError extends Error {
   }
 }
 
+function detailToMessage(detail) {
+  if (!detail) {
+    return ''
+  }
+
+  if (typeof detail === 'string') {
+    return detail
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((entry) => {
+        if (typeof entry === 'string') {
+          return entry
+        }
+
+        if (entry && typeof entry === 'object') {
+          const location = Array.isArray(entry.loc) ? entry.loc.join(' > ') : ''
+          const message = entry.msg || entry.message || entry.detail || JSON.stringify(entry)
+          return location ? `${location}: ${message}` : message
+        }
+
+        return String(entry)
+      })
+      .filter(Boolean)
+      .join(' | ')
+  }
+
+  if (typeof detail === 'object') {
+    return detail.message || detail.msg || detail.detail || JSON.stringify(detail)
+  }
+
+  return String(detail)
+}
+
 export async function apiFetch(path, options = {}) {
   const {
     method = 'GET',
@@ -70,7 +105,7 @@ export async function apiFetch(path, options = {}) {
 
   if (!response.ok) {
     const detail =
-      payload?.detail ||
+      detailToMessage(payload?.detail) ||
       payload?.message ||
       payload?.error ||
       (typeof payload === 'string' ? payload : '')
@@ -126,8 +161,10 @@ export function extractRecord(payload, fallbacks = []) {
 }
 
 export function getErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
-  if (error?.data?.detail) {
-    return `${error.status ? `${error.status}: ` : ''}${error.data.detail}`
+  const detailMessage = detailToMessage(error?.data?.detail)
+
+  if (detailMessage) {
+    return `${error.status ? `${error.status}: ` : ''}${detailMessage}`
   }
 
   if (error?.data?.message) {
