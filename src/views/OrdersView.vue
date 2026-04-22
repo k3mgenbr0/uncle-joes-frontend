@@ -1604,14 +1604,14 @@ onBeforeUnmount(() => {
               </article>
             </div>
 
-            <p v-if="favoriteError" class="helper-text helper-text--error">{{ favoriteError }}</p>
-
             <EmptyState
               v-else-if="!builderLoading && !builderError"
               compact
               title="No menu matches your filters"
               description="Try another search term or category."
             />
+
+            <p v-if="favoriteError" class="helper-text helper-text--error">{{ favoriteError }}</p>
           </BaseCard>
         </div>
       </div>
