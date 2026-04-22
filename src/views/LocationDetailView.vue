@@ -82,6 +82,23 @@ const weeklyHours = computed(() => {
 const cityStatePostal = computed(() =>
   formatCityStatePostal(location.value?.city, location.value?.state, location.value?.postalCode),
 )
+const detailAddress = computed(() =>
+  location.value?.fullAddress || location.value?.address || '',
+)
+const shouldShowAddressLineTwo = computed(() => {
+  if (!location.value?.addressLineTwo) {
+    return false
+  }
+
+  return !(detailAddress.value || '').toLowerCase().includes(String(location.value.addressLineTwo).toLowerCase())
+})
+const shouldShowCityStatePostal = computed(() => {
+  if (!cityStatePostal.value) {
+    return false
+  }
+
+  return !(detailAddress.value || '').toLowerCase().includes(cityStatePostal.value.toLowerCase())
+})
 
 async function loadLocation() {
   isLoading.value = true
@@ -154,9 +171,9 @@ onMounted(loadLocation)
 
           <h1>{{ formatStoreLabel(location.name, location.city, location.state) }}</h1>
           <div class="detail-stack">
-            <p v-if="location.address" class="detail-lead">{{ location.address }}</p>
-            <p v-if="location.addressLineTwo" class="detail-lead">{{ location.addressLineTwo }}</p>
-            <p v-if="cityStatePostal" class="detail-lead">{{ cityStatePostal }}</p>
+            <p v-if="detailAddress" class="detail-lead">{{ detailAddress }}</p>
+            <p v-if="shouldShowAddressLineTwo" class="detail-lead">{{ location.addressLineTwo }}</p>
+            <p v-if="shouldShowCityStatePostal" class="detail-lead">{{ cityStatePostal }}</p>
           </div>
 
           <div v-if="contactRows.length" class="detail-grid">
@@ -179,15 +196,15 @@ onMounted(loadLocation)
             {{ availability?.availabilityMessage || location.availabilityMessage }}
           </p>
 
-          <p v-if="availability?.nextCloseAt" class="helper-text helper-text--compact">
-            Next closes at {{ formatDateTime(availability.nextCloseAt) }}.
+          <p v-if="availability?.acceptingOrdersNow && availability?.nextCloseAt" class="helper-text helper-text--compact">
+            Closes at {{ formatDateTime(availability.nextCloseAt) }}.
           </p>
 
           <p v-else-if="availability?.nextOpenAt" class="helper-text helper-text--compact">
             Next opens at {{ formatDateTime(availability.nextOpenAt) }}.
           </p>
 
-          <div v-if="isStoreOrderable(location) && availability?.acceptingOrdersNow !== false" class="detail-cta-row">
+          <div v-if="isStoreOrderable(location)" class="detail-cta-row">
             <RouterLink :to="{ name: 'orders' }">
               <BaseButton variant="secondary">Start pickup order</BaseButton>
             </RouterLink>

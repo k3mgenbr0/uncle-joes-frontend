@@ -932,7 +932,7 @@ textarea {
   gap: 1rem;
   align-content: start;
   background:
-    linear-gradient(145deg, rgba(86, 42, 14, 0.98), rgba(120, 56, 12, 0.92));
+    linear-gradient(145deg, rgba(120, 56, 12, 0.94), rgba(86, 42, 14, 0.98));
   color: rgba(255, 253, 249, 0.94);
 }
 
@@ -941,12 +941,6 @@ textarea {
 .auth-brand-card .feature-list,
 .auth-brand-card .eyebrow {
   color: inherit;
-}
-
-.auth-brand-card__logo {
-  display: block;
-  width: min(100%, 15rem);
-  margin: 0 auto;
 }
 
 .auth-feature-list {
@@ -1161,12 +1155,21 @@ textarea {
 
 .card-link {
   display: inline-flex;
+  align-items: center;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-caramel);
   font-weight: 700;
   cursor: pointer;
+}
+
+.order-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.6rem;
 }
 
 .card-link--disabled {
@@ -1217,6 +1220,10 @@ textarea {
   border: 1px solid rgba(120, 56, 12, 0.08);
 }
 
+.order-store-summary strong:first-child {
+  font-size: 1.05rem;
+}
+
 .pickup-window-list {
   display: grid;
   gap: 0.45rem;
@@ -1238,6 +1245,7 @@ textarea {
   border: 1px solid rgba(120, 56, 12, 0.1);
   color: rgba(86, 42, 14, 0.88);
   font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .detail-cta-row {

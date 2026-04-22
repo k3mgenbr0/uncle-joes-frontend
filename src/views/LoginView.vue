@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import LoginForm from '../components/LoginForm.vue'
-import logoStacked from '../assets/branding/logo-stacked.png'
+import logoIcon from '../assets/branding/logo-icon.png'
 
 const route = useRoute()
 const redirectMessage = computed(() =>
@@ -21,9 +21,14 @@ const accessHighlights = [
   <section class="section">
     <div class="container auth-container auth-layout">
       <BaseCard class="auth-brand-card" padding="lg">
-        <img :src="logoStacked" alt="Uncle Joe's Coffee badge" class="auth-brand-card__logo" />
+        <div class="detail-brand-row detail-brand-row--compact">
+          <img :src="logoIcon" alt="Uncle Joe's Coffee icon" class="detail-brand-row__logo" />
+          <div>
+            <span class="eyebrow">Member Access</span>
+            <strong class="detail-brand-row__title">Uncle Joe's Coffee Club</strong>
+          </div>
+        </div>
         <div class="section-heading section-heading--left section-heading--compact">
-          <span class="eyebrow">Member Access</span>
           <h1>Coffee Club Login</h1>
           <p>{{ redirectMessage }}</p>
         </div>

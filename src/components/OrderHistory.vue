@@ -92,21 +92,23 @@ const emit = defineEmits(['retry', 'reorder'])
           </div>
         </div>
 
-        <RouterLink
-          v-if="order.id"
-          class="card-link"
-          :to="{ name: 'order-detail', params: { orderId: order.id } }"
-        >
-          View order details
-        </RouterLink>
-        <button
-          v-if="showReorder && order.items.length"
-          type="button"
-          class="card-link"
-          @click="emit('reorder', order)"
-        >
-          Reorder this visit
-        </button>
+        <div class="order-card__actions">
+          <RouterLink
+            v-if="order.id"
+            class="card-link"
+            :to="{ name: 'order-detail', params: { orderId: order.id } }"
+          >
+            View order details
+          </RouterLink>
+          <button
+            v-if="showReorder && order.items.length"
+            type="button"
+            class="card-link"
+            @click="emit('reorder', order)"
+          >
+            Reorder this visit
+          </button>
+        </div>
       </article>
     </div>
   </BaseCard>

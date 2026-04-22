@@ -13,7 +13,7 @@ import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMembe
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
 import { fetchLocationAvailability, fetchNearbyLocations, fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
 import { createPickupOrder, previewPickupOrder, previewReorder } from '../services/ordersService'
-import { formatCurrency, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone } from '../utils/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone } from '../utils/formatters'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -254,9 +254,7 @@ const canPlaceOrder = computed(() =>
     && cart.value.length
     && isStoreOrderable(selectedLocation.value)
     && !pickupTimeError.value
-    && effectiveStoreAvailability.value?.acceptingOrdersNow !== false
-    && !previewLoading.value
-    && !previewError.value,
+    && !previewLoading.value,
   ),
 )
 const cartPreviewSignature = computed(() =>
@@ -335,6 +333,25 @@ function serializePickupTime(value) {
 function formatPickupWindow(window) {
   if (!window?.start || !window?.end) {
     return ''
+  }
+
+  const start = new Date(window.start)
+  const end = new Date(window.end)
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return `${formatDateTime(window.start)} - ${formatDateTime(window.end)}`
+  }
+
+  const sameDay =
+    start.getFullYear() === end.getFullYear()
+    && start.getMonth() === end.getMonth()
+    && start.getDate() === end.getDate()
+
+  if (sameDay) {
+    const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
+    const endTime = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
+
+    return `${formatDate(window.start)} • ${formatHoursRange(startTime, endTime)}`
   }
 
   return `${formatDateTime(window.start)} - ${formatDateTime(window.end)}`
@@ -438,7 +455,6 @@ async function runOrderPreview(options = {}) {
     || !cart.value.length
     || pickupTimeError.value
     || !isStoreOrderable(selectedLocation.value)
-    || effectiveStoreAvailability.value?.acceptingOrdersNow === false
   ) {
     clearPreviewState()
     return null
@@ -1085,11 +1101,6 @@ async function submitOrder() {
     return
   }
 
-  if (effectiveStoreAvailability.value?.acceptingOrdersNow === false) {
-    submitError.value = effectiveStoreAvailability.value.availabilityMessage || 'This store is not accepting pickup orders right now.'
-    return
-  }
-
   if (!cart.value.length) {
     submitError.value = 'Add at least one menu item to your order.'
     return
@@ -1278,11 +1289,17 @@ onBeforeUnmount(() => {
                 <span class="helper-text helper-text--compact">
                   <strong v-if="effectiveStoreAvailability.acceptingOrdersNow">Open now for pickup.</strong>
                   <strong v-else-if="effectiveStoreAvailability.openNow === false">Closed right now.</strong>
+                  <strong v-else-if="effectiveStoreAvailability.acceptingOrdersNow === false">Pickup isn’t available right now.</strong>
                   <strong v-else>Pickup availability is being updated.</strong>
                   <template v-if="effectiveStoreAvailability.nextCloseAt">
-                    Closes at {{ formatDateTime(effectiveStoreAvailability.nextCloseAt) }}.
+                    <template v-if="effectiveStoreAvailability.acceptingOrdersNow">
+                      Closes at {{ formatDateTime(effectiveStoreAvailability.nextCloseAt) }}.
+                    </template>
+                    <template v-else>
+                      Next closes at {{ formatDateTime(effectiveStoreAvailability.nextCloseAt) }}.
+                    </template>
                   </template>
-                  <template v-else-if="effectiveStoreAvailability.nextOpenAt">
+                  <template v-if="!effectiveStoreAvailability.acceptingOrdersNow && effectiveStoreAvailability.nextOpenAt">
                     Next opens at {{ formatDateTime(effectiveStoreAvailability.nextOpenAt) }}.
                   </template>
                 </span>
@@ -1291,7 +1308,7 @@ onBeforeUnmount(() => {
                   :class="[
                     'helper-text',
                     'helper-text--compact',
-                    effectiveStoreAvailability.acceptingOrdersNow === false ? 'helper-text--warning' : '',
+                    !effectiveStoreAvailability.acceptingOrdersNow ? 'helper-text--warning' : '',
                   ]"
                 >
                   {{ effectiveStoreAvailability.availabilityMessage }}

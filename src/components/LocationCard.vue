@@ -25,7 +25,14 @@ const props = defineProps({
       >
         {{ props.location.availabilityMessage }}
       </span>
-      <strong v-else>{{ props.location.city }}</strong>
+      <strong
+        v-else-if="
+          props.location.city
+          && !String(props.location.displayName || '').toLowerCase().startsWith(String(props.location.city).toLowerCase())
+        "
+      >
+        {{ props.location.city }}
+      </strong>
     </div>
 
     <h3>{{ formatStoreLabel(props.location) }}</h3>

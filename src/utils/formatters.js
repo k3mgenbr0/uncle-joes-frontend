@@ -24,7 +24,7 @@ export function formatDate(value, options = {}) {
   }).format(parsed)
 }
 
-export function formatDateTime(value) {
+export function formatDateTime(value, options = {}) {
   if (!value) {
     return 'Unavailable'
   }
@@ -41,6 +41,7 @@ export function formatDateTime(value) {
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    ...options,
   }).format(parsed)
 }
 
