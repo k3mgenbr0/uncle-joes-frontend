@@ -669,6 +669,39 @@ const selectedStoreHoursSummary = computed(() => {
   return null
 })
 
+const displayedPickupWindows = computed(() => {
+  if (!selectedLocation.value) {
+    return []
+  }
+
+  if (pickupTime.value) {
+    const parsed = parseLocalDateTime(pickupTime.value)
+    const schedule = selectedPickupSchedule.value
+
+    if (!parsed || !schedule?.open || !schedule?.close) {
+      return []
+    }
+
+    const openMinutes = timeToMinutes(schedule.open)
+    const closeMinutes = timeToMinutes(schedule.close)
+
+    if (openMinutes === null || closeMinutes === null) {
+      return []
+    }
+
+    return [
+      {
+        start: setMinutesOnDate(parsed, openMinutes).toISOString(),
+        end: setMinutesOnDate(parsed, closeMinutes).toISOString(),
+      },
+    ]
+  }
+
+  return Array.isArray(effectiveStoreAvailability.value?.validPickupWindows)
+    ? effectiveStoreAvailability.value.validPickupWindows
+    : []
+})
+
 const pickupHoursHint = computed(() => {
   if (!selectedLocation.value) {
     return ''
@@ -1374,13 +1407,13 @@ onBeforeUnmount(() => {
                   {{ effectiveStoreAvailability.availabilityMessage }}
                 </span>
                 <div
-                  v-if="effectiveStoreAvailability.validPickupWindows?.length"
+                  v-if="displayedPickupWindows.length"
                   class="pickup-window-list"
                 >
                   <span class="input-label">Valid pickup windows</span>
                   <div class="pickup-window-list__items">
                     <span
-                      v-for="window in effectiveStoreAvailability.validPickupWindows.slice(0, 3)"
+                      v-for="window in displayedPickupWindows.slice(0, 3)"
                       :key="`${window.start}-${window.end}`"
                       class="pickup-window-chip"
                     >
