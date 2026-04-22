@@ -2,7 +2,7 @@
 
 ## Contributors
 
-- [Colten Brandt](https://github.com/brandt10)
+- [Colten Brandt: Frontend Developer](https://github.com/brandt10)
 - 
 
 Customer-facing Vue 3 frontend for Uncle Joe's Coffee Company. The app uses Vue Router for navigation, Pinia for member auth state, a shared fetch-based API layer, and a warm responsive design system tailored to the Uncle Joe's palette.
