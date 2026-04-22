@@ -130,6 +130,9 @@ const filteredStoreOptions = computed(() => {
       .some((value) => value.toLowerCase().includes(query)),
   )
 })
+const hasFilteredStoreSelection = computed(() =>
+  filteredStoreOptions.value.some((location) => location.id === selectedStoreId.value),
+)
 
 const filteredMenuItems = computed(() =>
   groupedMenuItems.value.filter((item) => {
@@ -1264,6 +1267,30 @@ onBeforeUnmount(() => {
                 type="text"
                 placeholder="Search by city, street, or keyword"
               />
+              <div
+                v-if="storeSearchTerm && filteredStoreOptions.length"
+                class="store-search-results"
+              >
+                <button
+                  v-for="location in filteredStoreOptions.slice(0, 8)"
+                  :key="`search-result-${location.id}`"
+                  type="button"
+                  :class="[
+                    'store-search-result',
+                    { 'store-search-result--active': location.id === selectedStoreId },
+                  ]"
+                  @click="selectedStoreId = location.id; refreshMenuForSelectedStore()"
+                >
+                  <strong>{{ formatStoreOptionLabel(location, locations) }}</strong>
+                  <span>{{ [location.address || location.fullAddress, [location.city, location.state].filter(Boolean).join(', ')].filter(Boolean).join(' • ') }}</span>
+                </button>
+              </div>
+              <p
+                v-if="storeSearchTerm && filteredStoreOptions.length && !hasFilteredStoreSelection"
+                class="helper-text helper-text--compact"
+              >
+                Choose one of the matching stores below to switch pickup locations.
+              </p>
               <select v-model="selectedStoreId" class="base-input base-select" @change="refreshMenuForSelectedStore">
                 <option disabled value="">Choose a store</option>
                 <option
