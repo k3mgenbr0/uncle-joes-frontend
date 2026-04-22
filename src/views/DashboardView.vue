@@ -86,34 +86,44 @@ const activeBonusPrograms = computed(() => [
 const programMilestones = computed(() => {
   const seen = new Set()
   const milestones = []
+  const normalizeMilestoneName = (value) =>
+    formatTitleCase(String(value || '').replace(/\bTier\b/gi, '').trim())
 
   for (const tier of rewardsProgram.value?.tiers || []) {
-    const key = `tier::${tier.name}::${tier.min_points}`
+    const title = normalizeMilestoneName(tier.name)
+    const points = Number(tier.min_points ?? 0)
+    const key = `${title.toLowerCase()}::${points}`
 
     if (!seen.has(key)) {
       seen.add(key)
       milestones.push({
         id: key,
-        title: formatTitleCase(tier.name),
-        subtitle: `${tier.min_points}+ points`,
+        title,
+        subtitle: `${points}+ points`,
       })
     }
   }
 
   for (const threshold of rewardsProgram.value?.rewardThresholds || []) {
-    const key = `threshold::${threshold.name}::${threshold.points_required}`
+    const title = normalizeMilestoneName(threshold.name)
+    const points = Number(threshold.points_required ?? 0)
+    const key = `${title.toLowerCase()}::${points}`
 
     if (!seen.has(key)) {
       seen.add(key)
       milestones.push({
         id: key,
-        title: threshold.name,
-        subtitle: `${threshold.points_required} points required`,
+        title,
+        subtitle: `${points} points required`,
       })
     }
   }
 
-  return milestones
+  return milestones.sort((left, right) => {
+    const leftPoints = Number.parseInt(left.subtitle, 10) || 0
+    const rightPoints = Number.parseInt(right.subtitle, 10) || 0
+    return leftPoints - rightPoints
+  })
 })
 
 async function loadSummary() {
