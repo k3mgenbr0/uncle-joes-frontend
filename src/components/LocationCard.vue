@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import BaseCard from './BaseCard.vue'
 import { isStoreOrderable } from '../services/locationsService'
 import { formatPhone, formatStoreLabel } from '../utils/formatters'
@@ -13,6 +14,32 @@ const props = defineProps({
     default: false,
   },
 })
+
+const labelParts = computed(() => {
+  const rawLabel = formatStoreLabel(props.location)
+  const [firstPart = '', ...rest] = String(rawLabel).split(' - ')
+
+  if (!rest.length) {
+    return {
+      title: rawLabel,
+      subtitle: '',
+    }
+  }
+
+  const rawSubtitle = rest.join(' - ')
+  const normalizedCity = String(firstPart).trim().toLowerCase()
+  const normalizedSubtitle = rawSubtitle.trim()
+  const normalizedSubtitleLower = normalizedSubtitle.toLowerCase()
+
+  const cleanedSubtitle = normalizedSubtitleLower.startsWith(`${normalizedCity} `)
+    ? normalizedSubtitle.slice(firstPart.length).trim()
+    : normalizedSubtitle
+
+  return {
+    title: firstPart,
+    subtitle: cleanedSubtitle,
+  }
+})
 </script>
 
 <template>
@@ -25,17 +52,12 @@ const props = defineProps({
       >
         {{ props.location.availabilityMessage }}
       </span>
-      <strong
-        v-else-if="
-          props.location.city
-          && !String(props.location.displayName || '').toLowerCase().startsWith(String(props.location.city).toLowerCase())
-        "
-      >
-        {{ props.location.city }}
-      </strong>
     </div>
 
-    <h3>{{ formatStoreLabel(props.location) }}</h3>
+    <div class="location-card__title-block">
+      <h3>{{ labelParts.title }}</h3>
+      <p v-if="labelParts.subtitle" class="location-card__subtitle">{{ labelParts.subtitle }}</p>
+    </div>
     <p v-if="props.location.address" class="card-copy">{{ props.location.address }}</p>
 
     <dl v-if="props.location.hoursTodayLabel || props.location.hoursLabel || props.location.phone" class="info-grid info-grid--single">

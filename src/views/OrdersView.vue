@@ -1621,7 +1621,7 @@ onBeforeUnmount(() => {
         <BaseCard class="panel-card panel-card--flat" padding="lg">
             <p class="eyebrow">History Filters</p>
             <h2>Find a previous order faster</h2>
-            <div class="filters-grid filters-grid--three">
+            <div class="filters-grid filters-grid--history-primary">
               <label class="input-group">
                 <span class="input-label">Search orders</span>
                 <input
@@ -1632,6 +1632,9 @@ onBeforeUnmount(() => {
                 />
               </label>
 
+            </div>
+
+            <div class="filters-grid filters-grid--history-secondary">
               <label class="input-group">
                 <span class="input-label">Status</span>
                 <select v-model="selectedOrderStatus" class="base-input base-select">
@@ -1650,10 +1653,10 @@ onBeforeUnmount(() => {
                   <option value="lowest-total">Lowest total</option>
                 </select>
               </label>
-            </div>
 
-            <div class="filters-actions">
-              <BaseButton size="sm" variant="ghost" @click="clearOrderFilters">Clear filters</BaseButton>
+              <div class="filters-actions filters-actions--history">
+                <BaseButton size="sm" variant="ghost" @click="clearOrderFilters">Clear filters</BaseButton>
+              </div>
             </div>
             <p v-if="orderItemsLimited" class="helper-text helper-text--compact">
               Detailed line items are temporarily unavailable from the backend, so reorder and item-level search are limited right now.

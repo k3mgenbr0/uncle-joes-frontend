@@ -41,7 +41,7 @@ defineProps({
       :type="type"
       :placeholder="placeholder"
       :autocomplete="autocomplete || undefined"
-      :required="required"
+      :aria-required="required ? 'true' : undefined"
       class="base-input"
     />
   </label>

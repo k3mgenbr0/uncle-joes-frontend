@@ -32,10 +32,6 @@ const accessHighlights = [
           <h1>Coffee Club Login</h1>
           <p>{{ redirectMessage }}</p>
         </div>
-        <div class="auth-brand-card__note">
-          <strong>Rewards, reorders, and pickup in one place.</strong>
-          <span>Use your Coffee Club sign-in to check points, save favorites, and place pickup orders faster.</span>
-        </div>
         <ul class="feature-list auth-feature-list">
           <li v-for="highlight in accessHighlights" :key="highlight">{{ highlight }}</li>
         </ul>
