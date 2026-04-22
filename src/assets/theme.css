@@ -932,7 +932,8 @@ textarea {
   gap: 1rem;
   align-content: start;
   background:
-    linear-gradient(145deg, rgba(120, 56, 12, 0.94), rgba(86, 42, 14, 0.98));
+    radial-gradient(circle at top left, rgba(228, 206, 175, 0.22), rgba(228, 206, 175, 0) 38%),
+    linear-gradient(145deg, rgba(120, 56, 12, 0.9), rgba(86, 42, 14, 0.96));
   color: rgba(255, 253, 249, 0.94);
 }
 
@@ -945,6 +946,28 @@ textarea {
 
 .auth-feature-list {
   margin-top: 0;
+}
+
+.auth-brand-card__note {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 252, 247, 0.09);
+  border: 1px solid rgba(255, 252, 247, 0.1);
+}
+
+.auth-brand-card__note strong {
+  color: rgba(255, 253, 249, 0.98);
+}
+
+.auth-brand-card__note span {
+  color: rgba(255, 253, 249, 0.82);
+  line-height: 1.45;
+}
+
+.auth-card {
+  max-width: 30rem;
 }
 
 .filters-actions {
@@ -1424,9 +1447,9 @@ textarea {
   position: relative;
   z-index: 1;
   margin: 0.9rem 0 0.45rem;
-  max-width: 12ch;
+  max-width: 16ch;
   line-height: 1.08;
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 
 .menu-card .card-copy,
@@ -1722,7 +1745,7 @@ textarea {
   }
 
   .filters-grid--three {
-    grid-template-columns: 1.5fr repeat(2, minmax(180px, 1fr));
+    grid-template-columns: minmax(17rem, 1.7fr) repeat(2, minmax(15rem, 1fr));
   }
 
   .filters-grid--four {
@@ -1730,8 +1753,9 @@ textarea {
   }
 
   .auth-layout {
-    grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1fr);
+    grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 0.78fr);
     align-items: start;
+    justify-content: center;
   }
 
   .order-builder-layout {

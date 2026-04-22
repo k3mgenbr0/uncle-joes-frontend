@@ -17,6 +17,11 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 
 async function handleSubmit() {
+  if (!form.email.trim() || !form.password) {
+    errorMessage.value = 'Enter your Coffee Club email and password to continue.'
+    return
+  }
+
   isSubmitting.value = true
   errorMessage.value = ''
 
@@ -36,7 +41,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <form class="login-form" @submit.prevent="handleSubmit">
+  <form class="login-form" novalidate @submit.prevent="handleSubmit">
     <BaseInput
       v-model="form.email"
       label="Email"
