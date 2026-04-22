@@ -636,6 +636,39 @@ const selectedPickupSchedule = computed(() => {
   return getPickupScheduleForDate(selectedLocation.value, parsed)
 })
 
+const selectedStoreHoursSummary = computed(() => {
+  if (!selectedLocation.value) {
+    return null
+  }
+
+  if (pickupTime.value) {
+    const parsed = parseLocalDateTime(pickupTime.value)
+    const schedule = selectedPickupSchedule.value
+
+    if (!parsed) {
+      return null
+    }
+
+    const dayLabel = WEEKDAYS[parsed.getDay()]
+
+    return {
+      label: dayLabel,
+      value: schedule?.open && schedule?.close
+        ? formatHoursRange(schedule.open, schedule.close)
+        : 'Closed',
+    }
+  }
+
+  if (selectedLocation.value.hoursTodayLabel) {
+    return {
+      label: 'Today',
+      value: selectedLocation.value.hoursTodayLabel,
+    }
+  }
+
+  return null
+})
+
 const pickupHoursHint = computed(() => {
   if (!selectedLocation.value) {
     return ''
@@ -1310,7 +1343,7 @@ onBeforeUnmount(() => {
               <strong>{{ selectedLocationLabel }}</strong>
               <span v-if="selectedLocation.address || selectedLocation.fullAddress">{{ selectedLocation.address || selectedLocation.fullAddress }}</span>
               <span v-if="selectedLocation.phone">Phone: {{ formatPhone(selectedLocation.phone) }}</span>
-              <span v-if="selectedLocation.hoursTodayLabel">Today: {{ selectedLocation.hoursTodayLabel }}</span>
+              <span v-if="selectedStoreHoursSummary">{{ selectedStoreHoursSummary.label }}: {{ selectedStoreHoursSummary.value }}</span>
               <div v-if="availabilityLoading" class="helper-text helper-text--compact">Checking live pickup availability…</div>
               <template v-else-if="effectiveStoreAvailability">
                 <span class="helper-text helper-text--compact">

@@ -13,7 +13,6 @@ const locations = ref([])
 const searchTerm = ref('')
 const selectedState = ref('All')
 const selectedCity = ref('All')
-const selectedRegion = ref('All')
 const selectedAmenity = ref('All')
 const selectedOpenNow = ref('All')
 const selectedAvailability = ref('All')
@@ -21,7 +20,6 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 
 const states = computed(() => ['All', ...Array.from(new Set(locations.value.map((location) => location.state).filter(Boolean))).sort()])
-const regions = computed(() => ['All', ...Array.from(new Set(locations.value.map((location) => location.region).filter(Boolean))).sort()])
 const amenities = computed(() => ['All', 'Wi-Fi', 'Drive-Thru', 'DoorDash', 'Pickup', 'Dine-In'])
 
 const cities = computed(() => {
@@ -39,7 +37,6 @@ const filteredLocations = computed(() => {
     (selectedAvailability.value === 'All'
       || (selectedAvailability.value === 'Open for Ordering' && isStoreOrderable(location))
       || (selectedAvailability.value === 'Coming Soon' && !isStoreOrderable(location))) &&
-    (selectedRegion.value === 'All' || location.region === selectedRegion.value) &&
     (selectedState.value === 'All' || location.state === selectedState.value) &&
     (selectedCity.value === 'All' || location.city === selectedCity.value) &&
     (selectedOpenNow.value === 'All'
@@ -60,7 +57,6 @@ const filteredLocations = computed(() => {
 
 function resetFilters() {
   searchTerm.value = ''
-  selectedRegion.value = 'All'
   selectedState.value = 'All'
   selectedCity.value = 'All'
   selectedAmenity.value = 'All'
@@ -99,7 +95,7 @@ onMounted(loadLocations)
           <h1>Locations</h1>
           <p>Search by city or state to find an Uncle Joe's Coffee shop near you.</p>
         </div>
-        <p class="catalog-heading__note">Filter by region, amenity, and ordering status to find the right stop for your next coffee run.</p>
+        <p class="catalog-heading__note">Filter by state, city, amenity, and ordering status to find the right stop for your next coffee run.</p>
       </div>
 
       <BaseCard class="filters-card" padding="lg">
@@ -107,15 +103,8 @@ onMounted(loadLocations)
           <BaseInput
             v-model="searchTerm"
             label="Search locations"
-            placeholder="Search by city, region, or address"
+            placeholder="Search by city, state, or address"
           />
-
-          <label class="input-group">
-            <span class="input-label">Region</span>
-            <select v-model="selectedRegion" class="base-input base-select">
-              <option v-for="region in regions" :key="region" :value="region">{{ region }}</option>
-            </select>
-          </label>
 
           <label class="input-group">
             <span class="input-label">State</span>
