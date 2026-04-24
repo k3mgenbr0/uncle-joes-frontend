@@ -4,12 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
-import { fetchMenuItem } from '../services/menuService'
+import { fetchMenu, fetchMenuItem, groupMenuItems } from '../services/menuService'
 import { dedupeLabels, formatCurrency, formatServiceLabel } from '../utils/formatters'
 
 const route = useRoute()
 const router = useRouter()
 const item = ref(null)
+const catalogVariants = ref([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 
@@ -21,6 +22,30 @@ const SIZE_PRIORITY = {
 }
 
 const variantOptions = computed(() => {
+  if (catalogVariants.value.length) {
+    return catalogVariants.value
+      .map((variant) => ({
+        id: variant.id,
+        name: item.value?.name ?? '',
+        category: variant.raw?.category ?? item.value?.category ?? '',
+        size: variant.size,
+        price: variant.price,
+        priceDisplay: variant.priceDisplay,
+        calories: variant.calories,
+        current: variant.id === item.value?.id,
+      }))
+      .sort((left, right) => {
+        const leftPriority = SIZE_PRIORITY[left.size] ?? 99
+        const rightPriority = SIZE_PRIORITY[right.size] ?? 99
+
+        if (leftPriority !== rightPriority) {
+          return leftPriority - rightPriority
+        }
+
+        return (left.size || '').localeCompare(right.size || '')
+      })
+  }
+
   if (!item.value) {
     return []
   }
@@ -45,7 +70,7 @@ const variantOptions = computed(() => {
         size: related.size,
         price: related.price ?? 0,
         priceDisplay: related.price !== null && related.price !== undefined ? formatCurrency(related.price) : '',
-        calories: null,
+        calories: related.calories ?? null,
         current: false,
       })),
   ]
@@ -160,12 +185,45 @@ function selectVariant(variantId) {
 async function loadItem() {
   isLoading.value = true
   errorMessage.value = ''
+  catalogVariants.value = []
 
   try {
-    item.value = await fetchMenuItem(itemId.value)
+    const [detailItem, menuItems] = await Promise.all([
+      fetchMenuItem(itemId.value),
+      fetchMenu(),
+    ])
+
+    const groupedItems = groupMenuItems(menuItems)
+    const matchingGroup =
+      groupedItems.find((group) => group.variants.some((variant) => variant.id === String(itemId.value)))
+      ?? groupedItems.find((group) =>
+        group.name === detailItem.name && group.category === detailItem.category,
+      )
+      ?? null
+
+    catalogVariants.value = matchingGroup?.variants ?? []
+
+    const matchingVariant =
+      matchingGroup?.variants.find((variant) => variant.id === String(itemId.value))
+      ?? null
+
+    item.value = {
+      ...detailItem,
+      size: detailItem.size || matchingVariant?.size || '',
+      calories:
+        detailItem.calories !== null && detailItem.calories !== undefined
+          ? detailItem.calories
+          : matchingVariant?.calories ?? null,
+      price:
+        detailItem.price || detailItem.price === 0
+          ? detailItem.price
+          : matchingVariant?.price ?? 0,
+      priceDisplay: detailItem.priceDisplay || matchingVariant?.priceDisplay || '',
+    }
   } catch (error) {
     errorMessage.value = error.message
     item.value = null
+    catalogVariants.value = []
   } finally {
     isLoading.value = false
   }

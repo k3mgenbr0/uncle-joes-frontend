@@ -130,6 +130,9 @@ const filteredStoreOptions = computed(() => {
       .some((value) => value.toLowerCase().includes(query)),
   )
 })
+const hasFilteredStoreSelection = computed(() =>
+  filteredStoreOptions.value.some((location) => location.id === selectedStoreId.value),
+)
 
 const filteredMenuItems = computed(() =>
   groupedMenuItems.value.filter((item) => {
@@ -631,6 +634,72 @@ const selectedPickupSchedule = computed(() => {
   }
 
   return getPickupScheduleForDate(selectedLocation.value, parsed)
+})
+
+const selectedStoreHoursSummary = computed(() => {
+  if (!selectedLocation.value) {
+    return null
+  }
+
+  if (pickupTime.value) {
+    const parsed = parseLocalDateTime(pickupTime.value)
+    const schedule = selectedPickupSchedule.value
+
+    if (!parsed) {
+      return null
+    }
+
+    const dayLabel = WEEKDAYS[parsed.getDay()]
+
+    return {
+      label: dayLabel,
+      value: schedule?.open && schedule?.close
+        ? formatHoursRange(schedule.open, schedule.close)
+        : 'Closed',
+    }
+  }
+
+  if (selectedLocation.value.hoursTodayLabel) {
+    return {
+      label: 'Today',
+      value: selectedLocation.value.hoursTodayLabel,
+    }
+  }
+
+  return null
+})
+
+const displayedPickupWindows = computed(() => {
+  if (!selectedLocation.value) {
+    return []
+  }
+
+  if (pickupTime.value) {
+    const parsed = parseLocalDateTime(pickupTime.value)
+    const schedule = selectedPickupSchedule.value
+
+    if (!parsed || !schedule?.open || !schedule?.close) {
+      return []
+    }
+
+    const openMinutes = timeToMinutes(schedule.open)
+    const closeMinutes = timeToMinutes(schedule.close)
+
+    if (openMinutes === null || closeMinutes === null) {
+      return []
+    }
+
+    return [
+      {
+        start: setMinutesOnDate(parsed, openMinutes).toISOString(),
+        end: setMinutesOnDate(parsed, closeMinutes).toISOString(),
+      },
+    ]
+  }
+
+  return Array.isArray(effectiveStoreAvailability.value?.validPickupWindows)
+    ? effectiveStoreAvailability.value.validPickupWindows
+    : []
 })
 
 const pickupHoursHint = computed(() => {
@@ -1264,6 +1333,30 @@ onBeforeUnmount(() => {
                 type="text"
                 placeholder="Search by city, street, or keyword"
               />
+              <div
+                v-if="storeSearchTerm && filteredStoreOptions.length"
+                class="store-search-results"
+              >
+                <button
+                  v-for="location in filteredStoreOptions.slice(0, 8)"
+                  :key="`search-result-${location.id}`"
+                  type="button"
+                  :class="[
+                    'store-search-result',
+                    { 'store-search-result--active': location.id === selectedStoreId },
+                  ]"
+                  @click="selectedStoreId = location.id; refreshMenuForSelectedStore()"
+                >
+                  <strong>{{ formatStoreOptionLabel(location, locations) }}</strong>
+                  <span>{{ [location.address || location.fullAddress, [location.city, location.state].filter(Boolean).join(', ')].filter(Boolean).join(' • ') }}</span>
+                </button>
+              </div>
+              <p
+                v-if="storeSearchTerm && filteredStoreOptions.length && !hasFilteredStoreSelection"
+                class="helper-text helper-text--compact"
+              >
+                Choose one of the matching stores below to switch pickup locations.
+              </p>
               <select v-model="selectedStoreId" class="base-input base-select" @change="refreshMenuForSelectedStore">
                 <option disabled value="">Choose a store</option>
                 <option
@@ -1283,7 +1376,7 @@ onBeforeUnmount(() => {
               <strong>{{ selectedLocationLabel }}</strong>
               <span v-if="selectedLocation.address || selectedLocation.fullAddress">{{ selectedLocation.address || selectedLocation.fullAddress }}</span>
               <span v-if="selectedLocation.phone">Phone: {{ formatPhone(selectedLocation.phone) }}</span>
-              <span v-if="selectedLocation.hoursTodayLabel">Today: {{ selectedLocation.hoursTodayLabel }}</span>
+              <span v-if="selectedStoreHoursSummary">{{ selectedStoreHoursSummary.label }}: {{ selectedStoreHoursSummary.value }}</span>
               <div v-if="availabilityLoading" class="helper-text helper-text--compact">Checking live pickup availability…</div>
               <template v-else-if="effectiveStoreAvailability">
                 <span class="helper-text helper-text--compact">
@@ -1314,13 +1407,13 @@ onBeforeUnmount(() => {
                   {{ effectiveStoreAvailability.availabilityMessage }}
                 </span>
                 <div
-                  v-if="effectiveStoreAvailability.validPickupWindows?.length"
+                  v-if="displayedPickupWindows.length"
                   class="pickup-window-list"
                 >
                   <span class="input-label">Valid pickup windows</span>
                   <div class="pickup-window-list__items">
                     <span
-                      v-for="window in effectiveStoreAvailability.validPickupWindows.slice(0, 3)"
+                      v-for="window in displayedPickupWindows.slice(0, 3)"
                       :key="`${window.start}-${window.end}`"
                       class="pickup-window-chip"
                     >
@@ -1604,14 +1697,14 @@ onBeforeUnmount(() => {
               </article>
             </div>
 
-            <p v-if="favoriteError" class="helper-text helper-text--error">{{ favoriteError }}</p>
-
             <EmptyState
               v-else-if="!builderLoading && !builderError"
               compact
               title="No menu matches your filters"
               description="Try another search term or category."
             />
+
+            <p v-if="favoriteError" class="helper-text helper-text--error">{{ favoriteError }}</p>
           </BaseCard>
         </div>
       </div>

@@ -1407,6 +1407,48 @@ textarea {
   gap: 0.6rem;
 }
 
+.store-search-results {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.store-search-result {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.85rem 0.95rem;
+  text-align: left;
+  border: 1px solid rgba(120, 56, 12, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 249, 0.88);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition),
+    background var(--transition);
+}
+
+.store-search-result strong {
+  color: var(--color-walnut);
+}
+
+.store-search-result span {
+  color: rgba(46, 24, 8, 0.72);
+  font-size: 0.92rem;
+}
+
+.store-search-result:hover {
+  transform: translateY(-1px);
+  border-color: rgba(200, 105, 28, 0.28);
+  box-shadow: 0 10px 24px rgba(86, 42, 14, 0.08);
+}
+
+.store-search-result--active {
+  background: rgba(228, 206, 175, 0.34);
+  border-color: rgba(200, 105, 28, 0.32);
+}
+
 .nearby-store-chip {
   border: 1px solid rgba(120, 56, 12, 0.16);
   border-radius: var(--radius-pill);
