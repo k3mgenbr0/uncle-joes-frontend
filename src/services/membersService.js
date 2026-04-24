@@ -268,8 +268,9 @@ export async function fetchSessionMemberSummary(options = {}) {
 
 export async function fetchSessionMemberFavorites(options = {}) {
   try {
+    const normalizedLimit = Math.min(Math.max(Number(options.limit ?? 6), 1), 50)
     const params = new URLSearchParams({
-      limit: String(options.limit ?? 6),
+      limit: String(normalizedLimit),
     })
 
     if (options.windowDays) {

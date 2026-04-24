@@ -57,7 +57,7 @@ async function loadFavorites() {
   }
 
   try {
-    const favorites = await fetchSessionMemberFavorites({ limit: 100 })
+    const favorites = await fetchSessionMemberFavorites({ limit: 50 })
     explicitFavoriteIds.value = new Set(
       favorites
         .filter((favorite) => favorite.isExplicit)
