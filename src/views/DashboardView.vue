@@ -63,6 +63,7 @@ const filteredPointsHistory = computed(() => {
     return !Number.isNaN(parsed.getTime()) && parsed >= cutoff
   })
 })
+const starredFavorites = computed(() => favorites.value.filter((favorite) => favorite.isExplicit === true))
 
 const recentPointsBars = computed(() => {
   const entries = filteredPointsHistory.value.slice(-6)
@@ -305,15 +306,15 @@ onMounted(() => {
           </div>
         </BaseCard>
 
-        <BaseCard v-if="favoritesLoading || favoritesError || favorites.length" class="panel-card panel-card--soft" padding="lg">
+        <BaseCard class="panel-card panel-card--soft" padding="lg">
           <p class="eyebrow">Favorites</p>
-          <h2>Your go-to orders</h2>
+          <h2>Your saved favorites</h2>
 
           <LoadingState
             v-if="favoritesLoading"
             compact
             title="Loading favorites"
-            description="Looking up your most-loved menu items."
+            description="Looking up the drinks you've starred."
           />
           <ErrorState
             v-else-if="favoritesError"
@@ -323,9 +324,9 @@ onMounted(() => {
             action-label="Try Again"
             @action="loadFavorites"
           />
-          <div v-else-if="favorites.length" class="favorites-list">
+          <div v-else-if="starredFavorites.length" class="favorites-list">
             <RouterLink
-              v-for="favorite in favorites"
+              v-for="favorite in starredFavorites"
               :key="favorite.id"
               :to="{ name: 'menu-item-detail', params: { itemId: favorite.id } }"
               class="favorite-link"
@@ -334,6 +335,12 @@ onMounted(() => {
               <span>{{ [favorite.category, favorite.size || favorite.defaultSize, favorite.currentPrice ? `$${favorite.currentPrice.toFixed(2)}` : ''].filter(Boolean).join(' • ') }}</span>
             </RouterLink>
           </div>
+          <EmptyState
+            v-else
+            compact
+            title="No favorites saved yet"
+            description="Star drinks from the menu to keep your regulars here for faster reordering."
+          />
         </BaseCard>
       </div>
 

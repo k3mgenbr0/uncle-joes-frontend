@@ -1828,9 +1828,14 @@ textarea {
   }
 
   .filters-grid--history-secondary {
-    grid-template-columns: minmax(18rem, 1fr) minmax(18rem, 1fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
     margin-top: 1rem;
+  }
+
+  .filters-actions--history {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
 
   .filters-grid--four {
