@@ -16,6 +16,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isFavoritePending: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['favorite-toggle'])
@@ -64,6 +68,7 @@ function toggleFavorite() {
         class="favorite-toggle"
         type="button"
         :aria-pressed="props.isFavorite"
+        :disabled="props.isFavoritePending"
         @click="toggleFavorite"
       >
         {{ props.isFavorite ? '★ Saved' : '☆ Save' }}

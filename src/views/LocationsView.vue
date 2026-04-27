@@ -103,6 +103,7 @@ onMounted(loadLocations)
           <BaseInput
             v-model="searchTerm"
             label="Search locations"
+            type="search"
             placeholder="Search by city, state, or address"
           />
 

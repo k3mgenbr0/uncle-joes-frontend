@@ -111,7 +111,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return { name: 'home' }
+    return { name: 'dashboard' }
   }
 
   return true

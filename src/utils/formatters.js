@@ -45,6 +45,30 @@ export function formatDateTime(value, options = {}) {
   }).format(parsed)
 }
 
+export function getDisplayReadyBy(order) {
+  if (!order?.readyByEstimate) {
+    return ''
+  }
+
+  if (!order.pickupTime) {
+    return order.readyByEstimate
+  }
+
+  const readyDate = new Date(order.readyByEstimate)
+  const pickupDate = new Date(order.pickupTime)
+
+  if (Number.isNaN(readyDate.getTime()) || Number.isNaN(pickupDate.getTime())) {
+    return order.readyByEstimate
+  }
+
+  return readyDate > pickupDate ? order.pickupTime : order.readyByEstimate
+}
+
+export function formatReadyBy(order) {
+  const displayValue = getDisplayReadyBy(order)
+  return displayValue ? formatDateTime(displayValue) : ''
+}
+
 export function formatTime(value) {
   if (!value) {
     return ''

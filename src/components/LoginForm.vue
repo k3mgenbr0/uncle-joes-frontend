@@ -31,7 +31,7 @@ async function handleSubmit() {
       password: form.password,
     })
 
-    router.push('/')
+    router.replace({ name: 'dashboard' })
   } catch (error) {
     errorMessage.value = error.message
   } finally {

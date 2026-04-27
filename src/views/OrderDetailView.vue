@@ -6,7 +6,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { fetchOrderDetail } from '../services/membersService'
-import { formatCurrency, formatDateTime, formatOrderStatus, formatPaymentMethod, formatPaymentStatus, formatPhone, formatShortOrderId, formatStoreLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatOrderStatus, formatPaymentMethod, formatPaymentStatus, formatPhone, formatReadyBy, formatShortOrderId, formatStoreLabel } from '../utils/formatters'
 import logoIcon from '../assets/branding/logo-icon.png'
 
 const route = useRoute()
@@ -78,7 +78,7 @@ onMounted(loadOrder)
 
           <div class="favorite-link order-callout order-callout--receipt">
             <strong>
-              {{ order.readyByEstimate ? `Ready by ${formatDateTime(order.readyByEstimate)}` : formatOrderStatus(order.orderStatus) }}
+              {{ order.readyByEstimate ? `Ready by ${formatReadyBy(order)}` : formatOrderStatus(order.orderStatus) }}
             </strong>
             <span>
               {{ order.storePhone ? `Store phone: ${formatPhone(order.storePhone)}` : 'Pay in store when you arrive.' }}
@@ -92,7 +92,7 @@ onMounted(loadOrder)
             </div>
             <div class="detail-grid__item" v-if="order.readyByEstimate">
               <span class="detail-label">Ready By</span>
-              <strong class="detail-value">{{ formatDateTime(order.readyByEstimate) }}</strong>
+              <strong class="detail-value">{{ formatReadyBy(order) }}</strong>
             </div>
             <div class="detail-grid__item" v-if="order.orderStatus">
               <span class="detail-label">Status</span>

@@ -26,6 +26,7 @@ defineProps({
       <BaseInput
         v-model="searchTerm"
         label="Search menu"
+        type="search"
         placeholder="Search by item name"
       />
 

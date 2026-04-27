@@ -16,6 +16,7 @@ const errorMessage = ref('')
 const searchTerm = ref('')
 const selectedCategory = ref('All')
 const explicitFavoriteIds = ref(new Set())
+const pendingFavoriteIds = ref(new Set())
 const favoriteError = ref('')
 
 const groupedMenuItems = computed(() => groupMenuItems(menuItems.value))
@@ -70,28 +71,48 @@ async function loadFavorites() {
 
 async function toggleFavorite({ item, variant }) {
   favoriteError.value = ''
+  const variantId = variant.id
+  const wasFavorite = explicitFavoriteIds.value.has(variantId)
+  const nextFavorites = new Set(explicitFavoriteIds.value)
+  const nextPending = new Set(pendingFavoriteIds.value)
+
+  if (wasFavorite) {
+    nextFavorites.delete(variantId)
+  } else {
+    nextFavorites.add(variantId)
+  }
+
+  nextPending.add(variantId)
+  explicitFavoriteIds.value = nextFavorites
+  pendingFavoriteIds.value = nextPending
 
   try {
-    if (explicitFavoriteIds.value.has(variant.id)) {
-      await deleteFavorite(variant.id)
-      const next = new Set(explicitFavoriteIds.value)
-      next.delete(variant.id)
-      explicitFavoriteIds.value = next
+    if (wasFavorite) {
+      await deleteFavorite(variantId)
       return
     }
 
-    await createFavorite(variant.id)
-    const next = new Set(explicitFavoriteIds.value)
-    next.add(variant.id)
-    explicitFavoriteIds.value = next
+    await createFavorite(variantId)
   } catch (error) {
+    const rollbackFavorites = new Set(explicitFavoriteIds.value)
+
+    if (wasFavorite) {
+      rollbackFavorites.add(variantId)
+    } else {
+      rollbackFavorites.delete(variantId)
+    }
+
+    explicitFavoriteIds.value = rollbackFavorites
     favoriteError.value = error.message
+  } finally {
+    const clearedPending = new Set(pendingFavoriteIds.value)
+    clearedPending.delete(variantId)
+    pendingFavoriteIds.value = clearedPending
   }
 }
 
-onMounted(async () => {
-  await loadMenu()
-  await loadFavorites()
+onMounted(() => {
+  Promise.all([loadMenu(), loadFavorites()])
 })
 </script>
 
@@ -139,6 +160,7 @@ onMounted(async () => {
           :key="item.id || item.name"
           :item="item"
           :is-favorite="isFavorite(item)"
+          :is-favorite-pending="item.variants.some((variant) => pendingFavoriteIds.has(variant.id))"
           :favorite-enabled="authStore.isAuthenticated"
           @favorite-toggle="toggleFavorite"
         />

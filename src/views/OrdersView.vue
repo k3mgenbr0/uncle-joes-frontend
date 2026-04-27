@@ -13,7 +13,7 @@ import { createFavorite, deleteFavorite, fetchMemberDashboard, fetchSessionMembe
 import { fetchMenuForStore, groupMenuItems } from '../services/menuService'
 import { fetchLocationAvailability, fetchNearbyLocations, fetchOrderableLocations, findClosestLocation, formatStoreOptionLabel, isStoreOrderable, sortNearbyLocations } from '../services/locationsService'
 import { createPickupOrder, previewPickupOrder, previewReorder } from '../services/ordersService'
-import { formatCurrency, formatDate, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone } from '../utils/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatFeatureError, formatHoursRange, formatOrderStatus, formatPhone, formatReadyBy } from '../utils/formatters'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -1330,7 +1330,7 @@ onBeforeUnmount(() => {
               <input
                 v-model="storeSearchTerm"
                 class="base-input"
-                type="text"
+                type="search"
                 placeholder="Search by city, street, or keyword"
               />
               <div
@@ -1506,7 +1506,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div v-if="previewOrder.readyByEstimate" class="hours-row">
                   <span>Ready by</span>
-                  <strong>{{ formatDateTime(previewOrder.readyByEstimate) }}</strong>
+                  <strong>{{ formatReadyBy(previewOrder) }}</strong>
                 </div>
                 <div v-if="previewOrder.orderStatus" class="hours-row">
                   <span>Status</span>
@@ -1609,7 +1609,7 @@ onBeforeUnmount(() => {
                 <input
                   v-model="menuSearchTerm"
                   class="base-input"
-                  type="text"
+                  type="search"
                   placeholder="Search by item name"
                 />
               </label>
@@ -1720,7 +1720,7 @@ onBeforeUnmount(() => {
                 <input
                   v-model="orderSearchTerm"
                   class="base-input"
-                  type="text"
+                  type="search"
                   placeholder="Search by store, status, or item"
                 />
               </label>
