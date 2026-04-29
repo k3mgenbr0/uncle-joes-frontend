@@ -299,6 +299,32 @@ function parseLocalDateTime(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+function formatTimezoneOffset(date) {
+  const offsetMinutes = -date.getTimezoneOffset()
+  const sign = offsetMinutes >= 0 ? '+' : '-'
+  const absoluteMinutes = Math.abs(offsetMinutes)
+  const hours = String(Math.floor(absoluteMinutes / 60)).padStart(2, '0')
+  const minutes = String(absoluteMinutes % 60).padStart(2, '0')
+
+  return `${sign}${hours}:${minutes}`
+}
+
+function serializeLocalDateTimeWithOffset(value) {
+  const parsed = parseLocalDateTime(value)
+
+  if (!parsed) {
+    return null
+  }
+
+  const year = parsed.getFullYear()
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const day = String(parsed.getDate()).padStart(2, '0')
+  const hours = String(parsed.getHours()).padStart(2, '0')
+  const minutes = String(parsed.getMinutes()).padStart(2, '0')
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:00${formatTimezoneOffset(parsed)}`
+}
+
 function normalizeDayKey(value) {
   return String(value || '')
     .trim()
@@ -329,8 +355,7 @@ function timeToMinutes(value) {
 }
 
 function serializePickupTime(value) {
-  const parsed = parseLocalDateTime(value)
-  return parsed ? parsed.toISOString() : null
+  return serializeLocalDateTimeWithOffset(value)
 }
 
 function formatPickupWindow(window) {
